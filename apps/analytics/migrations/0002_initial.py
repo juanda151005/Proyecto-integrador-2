@@ -10,25 +10,40 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('analytics', '0001_initial'),
-        ('core_business', '0001_initial'),
+        ("analytics", "0001_initial"),
+        ("core_business", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='clientchangelog',
-            name='changed_by',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL, verbose_name='Modificado por'),
+            model_name="clientchangelog",
+            name="changed_by",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to=settings.AUTH_USER_MODEL,
+                verbose_name="Modificado por",
+            ),
         ),
         migrations.AddField(
-            model_name='clientchangelog',
-            name='client',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='change_logs', to='core_business.client', verbose_name='Cliente'),
+            model_name="clientchangelog",
+            name="client",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="change_logs",
+                to="core_business.client",
+                verbose_name="Cliente",
+            ),
         ),
         migrations.AddField(
-            model_name='topup',
-            name='client',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='topups', to='core_business.client', verbose_name='Cliente'),
+            model_name="topup",
+            name="client",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="topups",
+                to="core_business.client",
+                verbose_name="Cliente",
+            ),
         ),
     ]

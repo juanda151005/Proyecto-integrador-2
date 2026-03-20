@@ -27,9 +27,10 @@ class TwilioService:
         if self._client is None:
             try:
                 from twilio.rest import Client
+
                 self._client = Client(self.account_sid, self.auth_token)
             except Exception as e:
-                logger.error(f'Error al inicializar Twilio: {e}')
+                logger.error(f"Error al inicializar Twilio: {e}")
                 raise
         return self._client
 
@@ -42,11 +43,11 @@ class TwilioService:
                 from_=self.phone_number,
                 to=to_number,
             )
-            logger.info(f'SMS enviado a {to_number} — SID: {msg.sid}')
-            return {'success': True, 'sid': msg.sid}
+            logger.info(f"SMS enviado a {to_number} — SID: {msg.sid}")
+            return {"success": True, "sid": msg.sid}
         except Exception as e:
-            logger.error(f'Error al enviar SMS a {to_number}: {e}')
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Error al enviar SMS a {to_number}: {e}")
+            return {"success": False, "error": str(e)}
 
     def send_whatsapp(self, to_number, message):
         """Envía un mensaje de WhatsApp al número indicado."""
@@ -55,13 +56,13 @@ class TwilioService:
             msg = client.messages.create(
                 body=message,
                 from_=self.whatsapp_number,
-                to=f'whatsapp:{to_number}',
+                to=f"whatsapp:{to_number}",
             )
-            logger.info(f'WhatsApp enviado a {to_number} — SID: {msg.sid}')
-            return {'success': True, 'sid': msg.sid}
+            logger.info(f"WhatsApp enviado a {to_number} — SID: {msg.sid}")
+            return {"success": True, "sid": msg.sid}
         except Exception as e:
-            logger.error(f'Error al enviar WhatsApp a {to_number}: {e}')
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Error al enviar WhatsApp a {to_number}: {e}")
+            return {"success": False, "error": str(e)}
 
 
 class ExternalAPIService:
@@ -77,12 +78,12 @@ class ExternalAPIService:
     def get_client_data(self, phone_number):
         """Consulta datos de un cliente en el sistema externo."""
         # TODO: Implementar con requests cuando esté disponible el endpoint
-        logger.info(f'Consultando API externa para {phone_number}')
+        logger.info(f"Consultando API externa para {phone_number}")
         return {
-            'success': True,
-            'data': {
-                'phone_number': phone_number,
-                'external_status': 'active',
-                'message': 'Stub — Implementar conexión real con la API externa.',
+            "success": True,
+            "data": {
+                "phone_number": phone_number,
+                "external_status": "active",
+                "message": "Stub — Implementar conexión real con la API externa.",
             },
         }

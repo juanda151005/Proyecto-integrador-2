@@ -23,3 +23,7 @@ twilio>=9.0,<10.0
 
 # Utilities
 python-dateutil>=2.9,<3.0
+
+# Code Quality (Style Guide)
+black
+pre-commit

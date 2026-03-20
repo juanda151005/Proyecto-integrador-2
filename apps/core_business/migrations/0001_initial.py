@@ -7,30 +7,105 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Client',
+            name="Client",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('phone_number', models.CharField(max_length=20, unique=True, verbose_name='Número de celular')),
-                ('full_name', models.CharField(max_length=200, verbose_name='Nombre completo')),
-                ('document_number', models.CharField(max_length=20, unique=True, verbose_name='Número de documento')),
-                ('email', models.EmailField(blank=True, max_length=254, verbose_name='Correo electrónico')),
-                ('activation_date', models.DateField(verbose_name='Fecha de activación')),
-                ('current_plan', models.CharField(choices=[('PREPAGO_BASIC', 'Prepago Básico'), ('PREPAGO_PLUS', 'Prepago Plus'), ('PREPAGO_PREMIUM', 'Prepago Premium')], default='PREPAGO_BASIC', max_length=20, verbose_name='Plan actual')),
-                ('is_eligible', models.BooleanField(default=False, verbose_name='¿Elegible para postpago?')),
-                ('average_spending', models.DecimalField(decimal_places=2, default=0, max_digits=12, verbose_name='Gasto promedio mensual')),
-                ('status', models.CharField(choices=[('ACTIVE', 'Activo'), ('INACTIVE', 'Inactivo'), ('MIGRATED', 'Migrado a Postpago')], default='ACTIVE', max_length=10, verbose_name='Estado')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Fecha de registro')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Última actualización')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "phone_number",
+                    models.CharField(
+                        max_length=20, unique=True, verbose_name="Número de celular"
+                    ),
+                ),
+                (
+                    "full_name",
+                    models.CharField(max_length=200, verbose_name="Nombre completo"),
+                ),
+                (
+                    "document_number",
+                    models.CharField(
+                        max_length=20, unique=True, verbose_name="Número de documento"
+                    ),
+                ),
+                (
+                    "email",
+                    models.EmailField(
+                        blank=True, max_length=254, verbose_name="Correo electrónico"
+                    ),
+                ),
+                (
+                    "activation_date",
+                    models.DateField(verbose_name="Fecha de activación"),
+                ),
+                (
+                    "current_plan",
+                    models.CharField(
+                        choices=[
+                            ("PREPAGO_BASIC", "Prepago Básico"),
+                            ("PREPAGO_PLUS", "Prepago Plus"),
+                            ("PREPAGO_PREMIUM", "Prepago Premium"),
+                        ],
+                        default="PREPAGO_BASIC",
+                        max_length=20,
+                        verbose_name="Plan actual",
+                    ),
+                ),
+                (
+                    "is_eligible",
+                    models.BooleanField(
+                        default=False, verbose_name="¿Elegible para postpago?"
+                    ),
+                ),
+                (
+                    "average_spending",
+                    models.DecimalField(
+                        decimal_places=2,
+                        default=0,
+                        max_digits=12,
+                        verbose_name="Gasto promedio mensual",
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("ACTIVE", "Activo"),
+                            ("INACTIVE", "Inactivo"),
+                            ("MIGRATED", "Migrado a Postpago"),
+                        ],
+                        default="ACTIVE",
+                        max_length=10,
+                        verbose_name="Estado",
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Fecha de registro"
+                    ),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(
+                        auto_now=True, verbose_name="Última actualización"
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Cliente',
-                'verbose_name_plural': 'Clientes',
-                'ordering': ['-created_at'],
+                "verbose_name": "Cliente",
+                "verbose_name_plural": "Clientes",
+                "ordering": ["-created_at"],
             },
         ),
     ]

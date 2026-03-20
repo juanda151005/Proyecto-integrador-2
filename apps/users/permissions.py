@@ -8,7 +8,7 @@ class IsAdmin(BasePermission):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role == 'ADMIN'
+            and request.user.role == "ADMIN"
         )
 
 
@@ -19,7 +19,7 @@ class IsAnalyst(BasePermission):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role == 'ANALYST'
+            and request.user.role == "ANALYST"
         )
 
 
@@ -30,7 +30,7 @@ class IsAgent(BasePermission):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role == 'AGENT'
+            and request.user.role == "AGENT"
         )
 
 
@@ -41,5 +41,5 @@ class IsAdminOrAnalyst(BasePermission):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role in ('ADMIN', 'ANALYST')
+            and request.user.role in ("ADMIN", "ANALYST")
         )

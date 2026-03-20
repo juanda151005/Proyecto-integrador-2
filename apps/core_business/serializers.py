@@ -8,11 +8,26 @@ class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = [
-            'id', 'phone_number', 'full_name', 'document_number', 'email',
-            'activation_date', 'current_plan', 'is_eligible',
-            'average_spending', 'status', 'created_at', 'updated_at',
+            "id",
+            "phone_number",
+            "full_name",
+            "document_number",
+            "email",
+            "activation_date",
+            "current_plan",
+            "is_eligible",
+            "average_spending",
+            "status",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ['id', 'is_eligible', 'average_spending', 'created_at', 'updated_at']
+        read_only_fields = [
+            "id",
+            "is_eligible",
+            "average_spending",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class ClientCreateSerializer(serializers.ModelSerializer):
@@ -21,8 +36,13 @@ class ClientCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = [
-            'id', 'phone_number', 'full_name', 'document_number',
-            'email', 'activation_date', 'current_plan',
+            "id",
+            "phone_number",
+            "full_name",
+            "document_number",
+            "email",
+            "activation_date",
+            "current_plan",
         ]
 
 
@@ -32,7 +52,12 @@ class ClientExportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = [
-            'phone_number', 'full_name', 'document_number',
-            'activation_date', 'current_plan', 'is_eligible',
-            'average_spending', 'status',
+            "phone_number",
+            "full_name",
+            "document_number",
+            "activation_date",
+            "current_plan",
+            "is_eligible",
+            "average_spending",
+            "status",
         ]

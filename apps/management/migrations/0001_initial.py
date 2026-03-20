@@ -7,42 +7,107 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='AuditLog',
+            name="AuditLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('action', models.CharField(choices=[('CREATE', 'Creación'), ('UPDATE', 'Actualización'), ('DELETE', 'Eliminación'), ('LOGIN', 'Inicio de sesión'), ('EXPORT', 'Exportación'), ('ELIGIBILITY_CHECK', 'Evaluación de elegibilidad'), ('NOTIFICATION_SENT', 'Notificación enviada')], max_length=30, verbose_name='Acción')),
-                ('model_name', models.CharField(max_length=100, verbose_name='Modelo/Entidad')),
-                ('object_id', models.CharField(blank=True, max_length=50, verbose_name='ID del objeto')),
-                ('changes', models.JSONField(blank=True, default=dict, verbose_name='Detalles/Cambios')),
-                ('ip_address', models.GenericIPAddressField(blank=True, null=True, verbose_name='Dirección IP')),
-                ('timestamp', models.DateTimeField(auto_now_add=True, verbose_name='Fecha/Hora')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "action",
+                    models.CharField(
+                        choices=[
+                            ("CREATE", "Creación"),
+                            ("UPDATE", "Actualización"),
+                            ("DELETE", "Eliminación"),
+                            ("LOGIN", "Inicio de sesión"),
+                            ("EXPORT", "Exportación"),
+                            ("ELIGIBILITY_CHECK", "Evaluación de elegibilidad"),
+                            ("NOTIFICATION_SENT", "Notificación enviada"),
+                        ],
+                        max_length=30,
+                        verbose_name="Acción",
+                    ),
+                ),
+                (
+                    "model_name",
+                    models.CharField(max_length=100, verbose_name="Modelo/Entidad"),
+                ),
+                (
+                    "object_id",
+                    models.CharField(
+                        blank=True, max_length=50, verbose_name="ID del objeto"
+                    ),
+                ),
+                (
+                    "changes",
+                    models.JSONField(
+                        blank=True, default=dict, verbose_name="Detalles/Cambios"
+                    ),
+                ),
+                (
+                    "ip_address",
+                    models.GenericIPAddressField(
+                        blank=True, null=True, verbose_name="Dirección IP"
+                    ),
+                ),
+                (
+                    "timestamp",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Fecha/Hora"),
+                ),
             ],
             options={
-                'verbose_name': 'Registro de auditoría',
-                'verbose_name_plural': 'Registros de auditoría',
-                'ordering': ['-timestamp'],
+                "verbose_name": "Registro de auditoría",
+                "verbose_name_plural": "Registros de auditoría",
+                "ordering": ["-timestamp"],
             },
         ),
         migrations.CreateModel(
-            name='BusinessRule',
+            name="BusinessRule",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('key', models.CharField(help_text='Identificador único de la regla (ej: MIN_AVERAGE_SPENDING)', max_length=100, unique=True, verbose_name='Clave')),
-                ('value', models.CharField(max_length=500, verbose_name='Valor')),
-                ('description', models.TextField(blank=True, verbose_name='Descripción')),
-                ('is_active', models.BooleanField(default=True, verbose_name='¿Activa?')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "key",
+                    models.CharField(
+                        help_text="Identificador único de la regla (ej: MIN_AVERAGE_SPENDING)",
+                        max_length=100,
+                        unique=True,
+                        verbose_name="Clave",
+                    ),
+                ),
+                ("value", models.CharField(max_length=500, verbose_name="Valor")),
+                (
+                    "description",
+                    models.TextField(blank=True, verbose_name="Descripción"),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(default=True, verbose_name="¿Activa?"),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'verbose_name': 'Regla de negocio',
-                'verbose_name_plural': 'Reglas de negocio',
-                'ordering': ['key'],
+                "verbose_name": "Regla de negocio",
+                "verbose_name_plural": "Reglas de negocio",
+                "ordering": ["key"],
             },
         ),
     ]

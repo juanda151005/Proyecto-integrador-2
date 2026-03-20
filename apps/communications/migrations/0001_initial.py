@@ -9,26 +9,74 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('core_business', '0001_initial'),
+        ("core_business", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='NotificationLog',
+            name="NotificationLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('message', models.TextField(verbose_name='Mensaje enviado')),
-                ('channel', models.CharField(choices=[('WHATSAPP', 'WhatsApp'), ('SMS', 'SMS')], max_length=10, verbose_name='Canal')),
-                ('status', models.CharField(choices=[('SENT', 'Enviada'), ('ACCEPTED', 'Aceptada'), ('REJECTED', 'Rechazada'), ('FAILED', 'Fallida')], default='SENT', max_length=10, verbose_name='Estado')),
-                ('external_id', models.CharField(blank=True, max_length=100, verbose_name='ID externo (Twilio SID)')),
-                ('sent_at', models.DateTimeField(auto_now_add=True, verbose_name='Fecha de envío')),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('client', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to='core_business.client', verbose_name='Cliente')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("message", models.TextField(verbose_name="Mensaje enviado")),
+                (
+                    "channel",
+                    models.CharField(
+                        choices=[("WHATSAPP", "WhatsApp"), ("SMS", "SMS")],
+                        max_length=10,
+                        verbose_name="Canal",
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("SENT", "Enviada"),
+                            ("ACCEPTED", "Aceptada"),
+                            ("REJECTED", "Rechazada"),
+                            ("FAILED", "Fallida"),
+                        ],
+                        default="SENT",
+                        max_length=10,
+                        verbose_name="Estado",
+                    ),
+                ),
+                (
+                    "external_id",
+                    models.CharField(
+                        blank=True,
+                        max_length=100,
+                        verbose_name="ID externo (Twilio SID)",
+                    ),
+                ),
+                (
+                    "sent_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Fecha de envío"
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "client",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="notifications",
+                        to="core_business.client",
+                        verbose_name="Cliente",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Log de notificación',
-                'verbose_name_plural': 'Logs de notificaciones',
-                'ordering': ['-sent_at'],
+                "verbose_name": "Log de notificación",
+                "verbose_name_plural": "Logs de notificaciones",
+                "ordering": ["-sent_at"],
             },
         ),
     ]

@@ -18,10 +18,11 @@ class NotificationLogListView(generics.ListAPIView):
     """
     GET — Lista logs de notificaciones enviadas.
     """
-    queryset = NotificationLog.objects.select_related('client').all()
+
+    queryset = NotificationLog.objects.select_related("client").all()
     serializer_class = NotificationLogSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ['channel', 'status', 'client']
+    filterset_fields = ["channel", "status", "client"]
 
 
 class SendNotificationView(APIView):
@@ -29,6 +30,7 @@ class SendNotificationView(APIView):
     POST — Envía una notificación a un cliente específico (RF15).
     Body: { "client_id": <int>, "channel": "WHATSAPP"|"SMS", "message": "..." }
     """
+
     permission_classes = [IsAdminOrAnalyst]
 
     def post(self, request):
@@ -36,19 +38,19 @@ class SendNotificationView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            client = Client.objects.get(pk=serializer.validated_data['client_id'])
+            client = Client.objects.get(pk=serializer.validated_data["client_id"])
         except Client.DoesNotExist:
             return Response(
-                {'detail': 'Cliente no encontrado.'},
+                {"detail": "Cliente no encontrado."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        channel = serializer.validated_data['channel']
-        message = serializer.validated_data['message']
+        channel = serializer.validated_data["channel"]
+        message = serializer.validated_data["message"]
 
         # Enviar via Twilio
         twilio = TwilioService()
-        if channel == 'WHATSAPP':
+        if channel == "WHATSAPP":
             result = twilio.send_whatsapp(client.phone_number, message)
         else:
             result = twilio.send_sms(client.phone_number, message)
@@ -58,8 +60,8 @@ class SendNotificationView(APIView):
             client=client,
             message=message,
             channel=channel,
-            status='SENT' if result['success'] else 'FAILED',
-            external_id=result.get('sid', ''),
+            status="SENT" if result["success"] else "FAILED",
+            external_id=result.get("sid", ""),
         )
 
         return Response(
@@ -73,6 +75,7 @@ class BulkNotifyEligibleView(APIView):
     POST — Envío masivo de ofertas a todos los clientes elegibles (RF15).
     Body: { "channel": "WHATSAPP"|"SMS", "message": "..." }
     """
+
     permission_classes = [IsAdmin]
 
     def post(self, request):
@@ -86,17 +89,17 @@ class BulkNotifyEligibleView(APIView):
 
         if not eligible_clients.exists():
             return Response(
-                {'detail': 'No hay clientes elegibles activos.'},
+                {"detail": "No hay clientes elegibles activos."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        channel = serializer.validated_data['channel']
-        message = serializer.validated_data['message']
-        results = {'sent': 0, 'failed': 0}
+        channel = serializer.validated_data["channel"]
+        message = serializer.validated_data["message"]
+        results = {"sent": 0, "failed": 0}
 
         twilio = TwilioService()
         for client in eligible_clients:
-            if channel == 'WHATSAPP':
+            if channel == "WHATSAPP":
                 result = twilio.send_whatsapp(client.phone_number, message)
             else:
                 result = twilio.send_sms(client.phone_number, message)
@@ -105,19 +108,21 @@ class BulkNotifyEligibleView(APIView):
                 client=client,
                 message=message,
                 channel=channel,
-                status='SENT' if result['success'] else 'FAILED',
-                external_id=result.get('sid', ''),
+                status="SENT" if result["success"] else "FAILED",
+                external_id=result.get("sid", ""),
             )
 
-            if result['success']:
-                results['sent'] += 1
+            if result["success"]:
+                results["sent"] += 1
             else:
-                results['failed'] += 1
+                results["failed"] += 1
 
-        return Response({
-            'detail': f'Envío masivo completado. Enviados: {results["sent"]}, Fallidos: {results["failed"]}',
-            **results,
-        })
+        return Response(
+            {
+                "detail": f'Envío masivo completado. Enviados: {results["sent"]}, Fallidos: {results["failed"]}',
+                **results,
+            }
+        )
 
 
 class ExternalAPIQueryView(APIView):
@@ -125,13 +130,14 @@ class ExternalAPIQueryView(APIView):
     GET — Consulta datos de un cliente en la API REST externa (RF20).
     Query param: ?phone_number=<str>
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        phone_number = request.query_params.get('phone_number')
+        phone_number = request.query_params.get("phone_number")
         if not phone_number:
             return Response(
-                {'detail': 'Se requiere el parámetro phone_number.'},
+                {"detail": "Se requiere el parámetro phone_number."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
