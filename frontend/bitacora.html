@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitácora de Login - Smart Migration System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Sidebar Layout -->
+    <div class="sidebar">
+        <div class="d-flex align-items-center gap-2 mb-5 px-2">
+            <i class="bi bi-rocket-takeoff text-primary fs-3"></i>
+            <h4 class="mb-0 fw-bold">SmartMig</h4>
+        </div>
+
+        <nav class="nav flex-column gap-1">
+            <a href="dashboard.html" class="nav-link-custom">
+                <i class="bi bi-house-door"></i> Inicio
+            </a>
+            
+            <a href="usuarios.html" class="nav-link-custom" id="navUsers">
+                <i class="bi bi-people"></i> Gestión de Usuarios
+            </a>
+
+            <!-- Este menú siempre está visible aquí porque esta página es exclusiva de Admin -->
+            <a href="bitacora.html" class="nav-link-custom active" id="navBitacora">
+                <i class="bi bi-journal-text"></i> Bitácora de Login
+            </a>
+            
+            <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
+                <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content fade-in">
+        <header class="mb-4">
+            <h2 class="fw-bold">Bitácora de Inicios de Sesión</h2>
+            <p class="text-secondary mb-0">RF05: Registro de todos los intentos de acceso al sistema (Exitosos y Fallidos).</p>
+        </header>
+
+        <div class="glass-panel p-4">
+            <h5 class="mb-4 d-flex align-items-center gap-2">
+                <i class="bi bi-journal-text text-primary"></i> Historial de Accesos
+            </h5>
+            
+            <div class="table-responsive">
+                <table class="table table-borderless table-custom">
+                    <thead>
+                        <tr>
+                            <th>Fecha y Hora</th>
+                            <th>Usuario Intentado</th>
+                            <th>Dirección IP</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bitacoraTableBody">
+                        <tr>
+                            <td colspan="4" class="text-center text-secondary py-4">Cargando bitácora...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        // RF19: Guard — Solo ADMIN puede ver la bitácora (protegido por initPage)
+        if (!SecurityService.initPage()) {
+            // El script redirigirá automáticamente si no hay permisos
+        }
+
+        const loadBitacora = async () => {
+            const tbody = document.getElementById('bitacoraTableBody');
+            try {
+                // Llama al endpoint de RF05 protegido por el token JWT y RBAC
+                const data = await fetchAPI('/users/login-attempts/');
+                
+                // DRF Pagination devuelve la lista dentro de "results"
+                const attempts = data.results || data; 
+
+                if (attempts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-secondary py-4">No hay registros de login en la base de datos</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = attempts.map(attempt => `
+                    <tr>
+                        <td class="text-secondary">${new Date(attempt.timestamp).toLocaleString()}</td>
+                        <td class="fw-medium text-primary">${attempt.username_attempted}</td>
+                        <td class="text-secondary"><i class="bi bi-globe me-1"></i> ${attempt.ip_address || 'Desconocida'}</td>
+                        <td>
+                            ${attempt.was_successful 
+                                ? '<span class="badge bg-success bg-opacity-75 px-3 py-2"><i class="bi bi-check-circle me-1"></i>Exitoso</span>' 
+                                : '<span class="badge bg-danger bg-opacity-75 px-3 py-2"><i class="bi bi-x-circle me-1"></i>Fallido</span>'}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error("Error al cargar bitácora:", error);
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-4">Error cargando los datos. Verifica tu conexión.</td></tr>';
+            }
+        };
+
+        // Cargar los datos a la tabla
+        loadBitacora();
+    </script>
+</body>
+</html>
