@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Smart Migration System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Sidebar Layout -->
+    <div class="sidebar">
+        <div class="d-flex align-items-center gap-2 mb-5 px-2">
+            <i class="bi bi-rocket-takeoff text-primary fs-3"></i>
+            <h4 class="mb-0 fw-bold">SmartMig</h4>
+        </div>
+
+        <nav class="nav flex-column gap-1">
+            <a href="dashboard.html" class="nav-link-custom active">
+                <i class="bi bi-house-door"></i> Inicio
+            </a>
+            
+            <!-- RF19 PREPARACIÓN: Este enlace solo lo verá el Administrador -->
+            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers">
+                <i class="bi bi-people"></i> Gestión de Usuarios
+            </a>
+            
+            <a href="#" class="nav-link-custom">
+                <i class="bi bi-person-lines-fill"></i> Clientes Prepago
+            </a>
+            
+            <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
+                <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content fade-in">
+        <header class="d-flex justify-content-between align-items-center mb-5 glass-panel p-3">
+            <div>
+                <h4 class="mb-0">Hola, <span id="userName">Usuario</span> 👋</h4>
+                <p class="text-secondary mb-0 small" id="userRole">Rol</p>
+            </div>
+            <div class="bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-medium text-sm">
+                <i class="bi bi-shield-check me-1"></i> Sesión Segura JWT
+            </div>
+        </header>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-primary bg-opacity-10 text-primary p-3 rounded-3 mb-3">
+                        <i class="bi bi-lightning-charge fs-4"></i>
+                    </div>
+                    <h5>Clientes Elegibles</h5>
+                    <h2 class="fw-bold mb-0">---</h2>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-success bg-opacity-10 text-success p-3 rounded-3 mb-3">
+                        <i class="bi bi-check-circle fs-4"></i>
+                    </div>
+                    <h5>Migraciones Exitosas</h5>
+                    <h2 class="fw-bold mb-0">---</h2>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-secondary bg-opacity-10 text-light p-3 rounded-3 mb-3">
+                        <i class="bi bi-cash-coin fs-4"></i>
+                    </div>
+                    <h5>Gasto Promedio</h5>
+                    <h2 class="fw-bold mb-0">---</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        // Proteger ruta
+        if(!SecurityService.isAuthenticated()) {
+            window.location.href = 'login.html';
+        }
+
+        // Cargar datos del usuario
+        const user = SecurityService.getUser();
+        if(user) {
+            document.getElementById('userName').innerText = user.first_name || user.username;
+            document.getElementById('userRole').innerText = user.role_display;
+
+            // RF19 Aplicado en UI: Mostrar menú de usuarios SOLO si es ADMIN
+            if (SecurityService.hasRole(['ADMIN'])) {
+                document.getElementById('navUsers').classList.remove('d-none');
+            }
+        }
+    </script>
+</body>
+</html>

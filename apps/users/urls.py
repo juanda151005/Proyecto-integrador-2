@@ -8,6 +8,9 @@ urlpatterns = [
     path('', views.UserListCreateView.as_view(), name='user-list-create'),
     path('<int:pk>/', views.UserDetailView.as_view(), name='user-detail'),
 
+    # RF02 — Verificar token / obtener usuario autenticado
+    path('me/', views.VerifyTokenView.as_view(), name='user-me'),
+
     # RF04 — Perfil del usuario autenticado
     path('profile/', views.ProfileView.as_view(), name='profile'),
 

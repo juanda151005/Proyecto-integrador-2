@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Smart Migration System</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="d-flex align-items-center justify-content-center">
+
+    <div class="container fade-in" style="max-width: 450px;">
+        <div class="glass-panel p-5">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 rounded-circle mb-3" style="width: 60px; height: 60px;">
+                    <i class="bi bi-rocket-takeoff text-primary fs-2"></i>
+                </div>
+                <h2 class="fw-bold mb-1">Smart Migration</h2>
+                <p class="text-secondary">Accede a tu cuenta</p>
+            </div>
+
+            <!-- Alerta de Error (Oculta por defecto) -->
+            <div id="errorAlert" class="alert alert-danger d-none py-2 px-3 text-sm" role="alert">
+                Revisa tus credenciales e intenta de nuevo.
+            </div>
+
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label class="form-label text-secondary small">Nombre de usuario</label>
+                    <input type="text" id="username" class="form-control form-control-custom" required placeholder="Ingresa tu usuario">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label text-secondary small">Contraseña</label>
+                    <input type="password" id="password" class="form-control form-control-custom" required placeholder="••••••••">
+                </div>
+
+                <button type="submit" id="btnSubmit" class="btn btn-primary-custom w-100 mb-3 d-flex justify-content-center align-items-center gap-2">
+                    <span>Iniciar Sesión</span>
+                    <i class="bi bi-box-arrow-in-right"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        // Redirigir si ya está logueado
+        if(SecurityService.isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+        }
+
+        const loginForm = document.getElementById('loginForm');
+        const errorAlert = document.getElementById('errorAlert');
+        const btnSubmit = document.getElementById('btnSubmit');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            errorAlert.classList.add('d-none');
+            
+            // Estado de carga
+            const originalText = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Autenticando...';
+            btnSubmit.disabled = true;
+
+            const payload = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                // LLAMADA A LA API (RF02)
+                const data = await fetchAPI('/auth/token/', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                // Si es exitoso, guardamos sesión y redirigimos
+                SecurityService.saveSession(data);
+                window.location.href = 'dashboard.html';
+
+            } catch (error) {
+                // Manejo de error de credenciales completando RF02
+                errorAlert.classList.remove('d-none');
+                if(error.data && error.data.detail) {
+                    errorAlert.innerText = error.data.detail;
+                }
+            } finally {
+                btnSubmit.innerHTML = originalText;
+                btnSubmit.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

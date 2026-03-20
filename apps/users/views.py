@@ -2,6 +2,7 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import CustomUser, LoginAttempt
 from .serializers import (
@@ -10,16 +11,29 @@ from .serializers import (
     ProfileUpdateSerializer,
     ChangePasswordSerializer,
     LoginAttemptSerializer,
+    CustomTokenObtainPairSerializer,
 )
 from .permissions import IsAdmin
 
 
+# =============================================================================
+# RF01 — Gestión de Usuarios y Roles
+# =============================================================================
+
 class UserListCreateView(generics.ListCreateAPIView):
     """
     GET  — Lista todos los usuarios (solo ADMIN).
-    POST — Crea un nuevo usuario (RF01).
+    POST — Crea un nuevo usuario con rol asignado (RF01).
+
+    RF01 Criterios:
+    - Se asigna al menos un rol al crear el usuario.
+    - No se permiten correos duplicados.
+    - Contraseña hasheada con algoritmo seguro.
     """
     queryset = CustomUser.objects.all()
+    filterset_fields = ['role', 'is_active']
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+    ordering_fields = ['created_at', 'username']
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -27,8 +41,7 @@ class UserListCreateView(generics.ListCreateAPIView):
         return UserSerializer
 
     def get_permissions(self):
-        if self.request.method == 'POST':
-            return [IsAdmin()]
+        """Solo ADMIN puede listar y crear usuarios."""
         return [IsAdmin()]
 
 
@@ -40,6 +53,50 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
 
+
+# =============================================================================
+# RF02 — Autenticación de Usuarios
+# =============================================================================
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    POST — Inicio de sesión con JWT (RF02).
+
+    Retorna access token, refresh token y datos del usuario (id, rol, nombre).
+    Registra automáticamente cada intento de login (exitoso o fallido) en la bitácora.
+
+    RF02 Criterios:
+    - Solo usuarios registrados y activos pueden autenticarse.
+    - El token expira después de un tiempo definido (configurable en settings).
+    - Errores de credenciales inválidas retornan 401 con mensaje descriptivo.
+    """
+    serializer_class = CustomTokenObtainPairSerializer
+
+
+class VerifyTokenView(APIView):
+    """
+    GET — Verifica el token JWT actual y retorna datos del usuario autenticado.
+    Útil para que el frontend sepa si el token sigue siendo válido y qué rol tiene.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'role': user.role,
+            'role_display': user.get_role_display(),
+            'is_active': user.is_active,
+        })
+
+
+# =============================================================================
+# RF03, RF04 — Perfil y Contraseña (esqueleto para futuros sprints)
+# =============================================================================
 
 class ProfileView(generics.RetrieveUpdateAPIView):
     """
@@ -74,6 +131,10 @@ class ChangePasswordView(APIView):
         return Response({'detail': 'Contraseña actualizada correctamente.'})
 
 
+# =============================================================================
+# RF05 — Bitácora de Login
+# =============================================================================
+
 class LoginAttemptListView(generics.ListAPIView):
     """
     GET — Lista intentos de login (RF05, solo ADMIN).
@@ -81,3 +142,5 @@ class LoginAttemptListView(generics.ListAPIView):
     queryset = LoginAttempt.objects.all()
     serializer_class = LoginAttemptSerializer
     permission_classes = [IsAdmin]
+    filterset_fields = ['was_successful']
+    search_fields = ['username_attempted', 'ip_address']

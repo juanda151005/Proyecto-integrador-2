@@ -4,24 +4,24 @@ URL configuration for Smart Migration System.
 
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework_simplejwt.views import TokenRefreshView
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
 
+# Importar la vista personalizada de JWT (RF02)
+from apps.users.views import CustomTokenObtainPairView
+
 urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
 
     # =========================================================================
-    # JWT Authentication
+    # JWT Authentication (RF02)
     # =========================================================================
-    path('api/v1/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/auth/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
     # =========================================================================

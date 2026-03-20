@@ -6,6 +6,11 @@ class CustomUser(AbstractUser):
     """
     Usuario personalizado con roles para RBAC.
     RF01 — Gestión de Usuarios y Roles.
+
+    Criterios de aceptación:
+    - El sistema permite asignar al menos un rol al crear el usuario.
+    - No se permiten correos electrónicos duplicados.
+    - La contraseña se almacena de forma segura (hasheada con PBKDF2/BCrypt).
     """
 
     class Role(models.TextChoices):
@@ -24,8 +29,18 @@ class CustomUser(AbstractUser):
         blank=True,
         verbose_name='Teléfono',
     )
+
+    # Forzar email único (Criterio de aceptación RF01)
+    email = models.EmailField(
+        unique=True,
+        verbose_name='Correo electrónico',
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Última actualización')
+
+    # Campos requeridos al crear superusuario
+    REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
 
     class Meta:
         verbose_name = 'Usuario'
@@ -51,6 +66,7 @@ class CustomUser(AbstractUser):
 class LoginAttempt(models.Model):
     """
     RF05 — Bitácora de intentos de inicio de sesión.
+    También utilizado por RF02 para registrar cada intento de autenticación.
     """
     user = models.ForeignKey(
         CustomUser,
