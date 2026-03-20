@@ -22,9 +22,14 @@
                 <i class="bi bi-house-door"></i> Inicio
             </a>
             
-            <!-- RF19 PREPARACIÓN: Este enlace solo lo verá el Administrador -->
+            <!-- RF19: Solo visible para ADMIN -->
             <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers">
                 <i class="bi bi-people"></i> Gestión de Usuarios
+            </a>
+
+            <!-- RF19: Bitácora solo visible para ADMIN -->
+            <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora">
+                <i class="bi bi-journal-text"></i> Bitácora de Login
             </a>
             
             <a href="#" class="nav-link-custom">
@@ -80,26 +85,32 @@
                 </div>
             </div>
         </div>
+
+        <!-- RF19: Panel de acciones rápidas solo para Admin -->
+        <div class="row g-4 mt-2 d-none" data-rbac-roles="ADMIN">
+            <div class="col-12">
+                <div class="glass-panel p-4">
+                    <h5 class="mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-gear text-primary"></i> Panel de Administración
+                    </h5>
+                    <p class="text-secondary small mb-3">RF19: Este panel solo es visible para el rol Administrador.</p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="usuarios.html" class="btn btn-primary-custom btn-sm">
+                            <i class="bi bi-people me-1"></i> Gestionar Usuarios
+                        </a>
+                        <a href="bitacora.html" class="btn btn-secondary-custom btn-sm">
+                            <i class="bi bi-journal-text me-1"></i> Ver Bitácora
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="js/api.js"></script>
     <script>
-        // Proteger ruta
-        if(!SecurityService.isAuthenticated()) {
-            window.location.href = 'login.html';
-        }
-
-        // Cargar datos del usuario
-        const user = SecurityService.getUser();
-        if(user) {
-            document.getElementById('userName').innerText = user.first_name || user.username;
-            document.getElementById('userRole').innerText = user.role_display;
-
-            // RF19 Aplicado en UI: Mostrar menú de usuarios SOLO si es ADMIN
-            if (SecurityService.hasRole(['ADMIN'])) {
-                document.getElementById('navUsers').classList.remove('d-none');
-            }
-        }
+        // RF19: Guard centralizado — verifica auth y aplica RBAC en UI
+        SecurityService.initPage();
     </script>
 </body>
 </html>
