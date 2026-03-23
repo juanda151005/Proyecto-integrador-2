@@ -4,7 +4,13 @@ Persona 5 — RF15, RF20.
 """
 
 import logging
+
 from django.conf import settings
+from django.utils import timezone
+
+from apps.management.runtime_settings import get_runtime_settings
+
+from .models import NotificationLog
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +28,17 @@ class TwilioService:
         self.whatsapp_number = settings.TWILIO_WHATSAPP_NUMBER
         self._client = None
 
+    def _twilio_daily_limit_ok(self):
+        limit = get_runtime_settings()["twilio_daily_message_limit"]
+        today = timezone.localdate()
+        sent_today = NotificationLog.objects.filter(sent_at__date=today).count()
+        if sent_today >= limit:
+            return (
+                False,
+                f"Límite diario de Twilio alcanzado ({limit}).",
+            )
+        return True, None
+
     def _get_client(self):
         """Inicializa el cliente de Twilio. Lazy loading."""
         if self._client is None:
@@ -36,6 +53,9 @@ class TwilioService:
 
     def send_sms(self, to_number, message):
         """Envía un SMS al número indicado."""
+        ok, err = self._twilio_daily_limit_ok()
+        if not ok:
+            return {"success": False, "error": err}
         try:
             client = self._get_client()
             msg = client.messages.create(
@@ -51,6 +71,9 @@ class TwilioService:
 
     def send_whatsapp(self, to_number, message):
         """Envía un mensaje de WhatsApp al número indicado."""
+        ok, err = self._twilio_daily_limit_ok()
+        if not ok:
+            return {"success": False, "error": err}
         try:
             client = self._get_client()
             msg = client.messages.create(
