@@ -29,8 +29,8 @@ class TopUpListCreateView(generics.ListCreateAPIView):
     ordering_fields = ["date", "amount"]
 
 
-class TopUpDetailView(generics.RetrieveAPIView):
-    """GET — Detalle de una recarga específica."""
+class TopUpDetailView(generics.RetrieveUpdateAPIView):
+    """GET, PUT, PATCH — Leer o editar una recarga específica."""
 
     queryset = TopUp.objects.select_related("client").all()
     serializer_class = TopUpSerializer
