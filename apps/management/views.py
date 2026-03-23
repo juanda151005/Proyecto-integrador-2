@@ -1,17 +1,32 @@
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import BusinessRule, AuditLog
-from .serializers import (
-    BusinessRuleSerializer,
-    AuditLogSerializer,
-    ConversionReportSerializer,
-)
-from apps.users.permissions import IsAdmin, IsAdminOrAnalyst
-from apps.core_business.models import Client
 from apps.communications.models import NotificationLog
+from apps.core_business.models import Client
+from apps.users.permissions import IsAdmin, IsAdminOrAnalyst
+
+from .models import AuditLog, BusinessRule, GlobalSystemSettings
+from .serializers import (
+    AuditLogSerializer,
+    BusinessRuleSerializer,
+    ConversionReportSerializer,
+    GlobalSystemSettingsSerializer,
+)
+
+
+class GlobalSystemSettingsView(generics.RetrieveUpdateAPIView):
+    """
+    GET / PATCH — Configuración global del sistema (solo ADMIN).
+    Los cambios se aplican en caliente vía caché (sin reinicio).
+    """
+
+    serializer_class = GlobalSystemSettingsSerializer
+    permission_classes = [IsAdmin]
+
+    def get_object(self):
+        return GlobalSystemSettings.get_solo()
 
 
 class BusinessRuleListCreateView(generics.ListCreateAPIView):

@@ -1,5 +1,20 @@
 from rest_framework import serializers
-from .models import BusinessRule, AuditLog
+
+from .models import AuditLog, BusinessRule, GlobalSystemSettings
+
+
+class GlobalSystemSettingsSerializer(serializers.ModelSerializer):
+    """Configuración global (singleton) — solo ADMIN."""
+
+    class Meta:
+        model = GlobalSystemSettings
+        fields = [
+            "id",
+            "analysis_interval_minutes",
+            "twilio_daily_message_limit",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "updated_at"]
 
 
 class BusinessRuleSerializer(serializers.ModelSerializer):

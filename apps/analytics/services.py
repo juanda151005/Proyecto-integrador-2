@@ -19,6 +19,13 @@ class EligibilityEngine:
     """
 
     @staticmethod
+    def get_analysis_interval_minutes():
+        """Periodicidad de re-análisis configurada en GlobalSystemSettings (caliente)."""
+        from apps.management.runtime_settings import get_runtime_settings
+
+        return get_runtime_settings()["analysis_interval_minutes"]
+
+    @staticmethod
     def get_threshold():
         """Obtiene el umbral mínimo de gasto promedio desde BusinessRule."""
         try:
