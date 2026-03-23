@@ -9,6 +9,7 @@ const API_BASE_URL = 'http://localhost:8000/api/v1';
 const ROUTE_PERMISSIONS = {
     'usuarios.html': ['ADMIN'],
     'bitacora.html': ['ADMIN'],
+    'configuracion.html': ['ADMIN'],
 };
 
 // ==========================================================================
@@ -123,6 +124,13 @@ const SecurityService = {
         if (navBitacora) {
             if (SecurityService.hasRole(['ADMIN'])) {
                 navBitacora.classList.remove('d-none');
+            }
+        }
+
+        const navConfig = document.getElementById('navConfig');
+        if (navConfig) {
+            if (SecurityService.hasRole(['ADMIN'])) {
+                navConfig.classList.remove('d-none');
             }
         }
 

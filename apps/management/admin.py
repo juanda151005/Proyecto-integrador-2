@@ -1,5 +1,21 @@
 from django.contrib import admin
-from .models import BusinessRule, AuditLog
+from .models import AuditLog, BusinessRule, GlobalSystemSettings
+
+
+@admin.register(GlobalSystemSettings)
+class GlobalSystemSettingsAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "analysis_interval_minutes",
+        "twilio_daily_message_limit",
+        "updated_at",
+    ]
+
+    def has_add_permission(self, request):
+        return not GlobalSystemSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(BusinessRule)

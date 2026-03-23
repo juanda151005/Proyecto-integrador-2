@@ -22,6 +22,11 @@ RBAC_ROUTE_MAP = [
         "methods": ["GET"],
         "allowed_roles": ["ADMIN"],
     },
+    {
+        "pattern": r"^/api/v1/management/system-settings/$",
+        "methods": ["GET", "PUT", "PATCH"],
+        "allowed_roles": ["ADMIN"],
+    },
 ]
 
 # Rutas que NO requieren autenticación (login, docs, schema)
