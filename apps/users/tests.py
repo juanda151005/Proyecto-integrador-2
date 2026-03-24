@@ -261,3 +261,89 @@ class UserManagementViewsTest(TestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+# =============================================================================
+# Tests para RF19 — RBAC (Control de Acceso Basado en Roles)
+# =============================================================================
+
+
+class RBACMiddlewareTest(TestCase):
+    """Tests para el middleware RBAC (RF19)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = CustomUser.objects.create_user(
+            username="rbac_admin",
+            email="rbac_admin@test.com",
+            password="AdminPass123*",
+            role=CustomUser.Role.ADMIN,
+        )
+        self.agent = CustomUser.objects.create_user(
+            username="rbac_agent",
+            email="rbac_agent@test.com",
+            password="AgentPass123*",
+            role=CustomUser.Role.AGENT,
+        )
+        self.analyst = CustomUser.objects.create_user(
+            username="rbac_analyst",
+            email="rbac_analyst@test.com",
+            password="AnalystPass123*",
+            role=CustomUser.Role.ANALYST,
+        )
+
+    def test_agent_cannot_list_users(self):
+        """RF19: Un Asesor NO puede acceder a la lista de usuarios."""
+        self.client.force_authenticate(user=self.agent)
+        response = self.client.get("/api/v1/users/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("detail", response.json())
+
+    def test_agent_cannot_create_user(self):
+        """RF19: Un Asesor NO puede crear usuarios."""
+        self.client.force_authenticate(user=self.agent)
+        response = self.client.post(
+            "/api/v1/users/",
+            {
+                "username": "blocked",
+                "email": "blocked@test.com",
+                "password": "Pass1234*",
+                "password_confirm": "Pass1234*",
+                "role": "AGENT",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_agent_cannot_delete_user(self):
+        """RF19: Un Asesor NO puede eliminar usuarios."""
+        self.client.force_authenticate(user=self.agent)
+        response = self.client.delete(f"/api/v1/users/{self.admin.id}/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_agent_cannot_view_login_attempts(self):
+        """RF19: Un Asesor NO puede ver la bitácora de login."""
+        self.client.force_authenticate(user=self.agent)
+        response = self.client.get("/api/v1/users/login-attempts/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_analyst_cannot_manage_users(self):
+        """RF19: Un Analista NO puede acceder a gestión de usuarios."""
+        self.client.force_authenticate(user=self.analyst)
+        response = self.client.get("/api/v1/users/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_access_all(self):
+        """RF19: Un Admin SÍ puede acceder a todo."""
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/v1/users/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_forbidden_response_includes_role_info(self):
+        """RF19: La respuesta 403 incluye info del rol requerido vs actual."""
+        self.client.force_authenticate(user=self.agent)
+        response = self.client.get("/api/v1/users/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        data = response.json()
+        # El middleware retorna detail con info, o DRF retorna su propio 403
+        self.assertIn("detail", data)

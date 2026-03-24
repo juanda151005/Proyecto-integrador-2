@@ -4,6 +4,11 @@ from . import views
 app_name = "app_management"
 
 urlpatterns = [
+    path(
+        "system-settings/",
+        views.GlobalSystemSettingsView.as_view(),
+        name="global-system-settings",
+    ),
     # RF16 — Configuración de parámetros generales
     path(
         "rules/",

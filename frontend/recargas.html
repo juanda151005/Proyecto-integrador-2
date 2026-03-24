@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recargas - Smart Migration System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Sidebar Layout -->
+    <div class="sidebar">
+        <div class="d-flex align-items-center gap-2 mb-5 px-2">
+            <i class="bi bi-rocket-takeoff text-primary fs-3"></i>
+            <h4 class="mb-0 fw-bold">SmartMig</h4>
+        </div>
+
+        <nav class="nav flex-column gap-1">
+            <a href="dashboard.html" class="nav-link-custom">
+                <i class="bi bi-house-door"></i> Inicio
+            </a>
+            <a href="recargas.html" class="nav-link-custom active" id="navRecargas">
+                <i class="bi bi-cash-stack"></i> Registro de Recargas
+            </a>
+            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers">
+                <i class="bi bi-people"></i> Gestión de Usuarios
+            </a>
+            <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora">
+                <i class="bi bi-journal-text"></i> Bitácora de Login
+            </a>
+            <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig">
+                <i class="bi bi-sliders"></i> Configuración global
+            </a>
+            <a href="#" class="nav-link-custom">
+                <i class="bi bi-person-lines-fill"></i> Clientes Prepago
+            </a>
+            <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
+                <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content fade-in">
+        <header class="mb-4">
+            <h2 class="fw-bold">Registro de Recargas (Top-Ups)</h2>
+            <p class="text-secondary mb-0">RF11: Crea, visualiza y edita las recargas de los clientes prepago.</p>
+        </header>
+
+        <div class="row">
+            <!-- Formulario de Recargas -->
+            <div class="col-md-4 mb-4">
+                <div class="glass-panel p-4" id="form-container">
+                    <h5 class="mb-4 d-flex align-items-center gap-2" id="formTitle">
+                        <i class="bi bi-plus-circle text-primary"></i> Registrar Recarga
+                    </h5>
+                    
+                    <div id="formAlert" class="alert d-none py-2 px-3 text-sm"></div>
+
+                    <form id="topupForm">
+                        <input type="hidden" id="editingId" value="">
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small">Cliente</label>
+                            <select id="clientSelect" class="form-select form-control-custom" required>
+                                <option value="" disabled selected>Cargando clientes...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small">Monto ($)</label>
+                            <input type="number" step="0.01" min="0" id="amount" class="form-control form-control-custom" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small">Fecha de Recarga</label>
+                            <!-- Se pone la fecha actual por defecto en JS -->
+                            <input type="date" id="date" class="form-control form-control-custom" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-secondary small">Canal de Recarga</label>
+                            <select id="channel" class="form-select form-control-custom" required>
+                                <option value="ONLINE">En línea</option>
+                                <option value="STORE">Tienda física</option>
+                                <option value="ATM">Cajero automático</option>
+                                <option value="APP">Aplicación móvil</option>
+                            </select>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" id="btnCancel" class="btn btn-secondary-custom w-50 d-none" onclick="resetForm()">Cancelar</button>
+                            <button type="submit" id="btnSubmit" class="btn btn-primary-custom w-100">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tabla Historial -->
+            <div class="col-md-8">
+                <div class="glass-panel p-4">
+                    <h5 class="mb-4 d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history text-primary"></i> Historial de Recargas
+                    </h5>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-borderless table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Monto</th>
+                                    <th>Canal</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topupsTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center text-secondary py-4">Cargando recargas...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security & API -->
+    <script src="js/api.js"></script>
+    <script>
+        // Init la página (Auth Check + RBAC)
+        SecurityService.initPage();
+
+        // Elements
+        const formTopup = document.getElementById('topupForm');
+        const clientSelect = document.getElementById('clientSelect');
+        const alertBox = document.getElementById('formAlert');
+        const formTitle = document.getElementById('formTitle');
+        const btnSubmit = document.getElementById('btnSubmit');
+        const btnCancel = document.getElementById('btnCancel');
+        
+        // Estado de Edición
+        let isEditing = false;
+
+        // Formato Moneda
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(amount);
+        };
+
+        // ====== 1. Cargar Clientes para el <select> ======
+        const loadClients = async () => {
+            try {
+                const data = await fetchAPI('/clients/'); 
+                const clients = data.results || data; 
+                
+                if (clients.length === 0) {
+                    clientSelect.innerHTML = '<option value="" disabled selected>No hay clientes registrados</option>';
+                    return;
+                }
+                
+                clientSelect.innerHTML = '<option value="" disabled selected>Selecciona un cliente</option>' + 
+                    clients.map(c => `<option value="${c.id}">${c.name || c.phone_number}</option>`).join('');
+            } catch (error) {
+                console.error('Error cargando clientes:', error);
+                clientSelect.innerHTML = '<option value="" disabled selected>Error cargando clientes</option>';
+            }
+        };
+
+        // ====== 2. Cargar Historial de Recargas ======
+        const loadTopUps = async () => {
+            const tbody = document.getElementById('topupsTableBody');
+            try {
+                const data = await fetchAPI('/analytics/topups/');
+                const topups = data.results || data;
+
+                if (topups.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-secondary">No hay recargas registradas</td></tr>';
+                    return;
+                }
+
+                // Generamos tabla con botón EDITAR
+                tbody.innerHTML = topups.map(t => {
+                    // Preparamos los datos para que el botón pueda pasarlos a la función editTopUp
+                    // Se hace stringify seguro reemplazando comillas
+                    const topupJson = JSON.stringify(t).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                    
+                    return `
+                    <tr>
+                        <td class="text-secondary">${t.date}</td>
+                        <td class="fw-medium text-primary">
+                            <i class="bi bi-person me-1"></i> ${t.client_phone || t.client}
+                        </td>
+                        <td class="fw-bold text-success">${formatCurrency(t.amount)}</td>
+                        <td><span class="badge bg-secondary bg-opacity-50 text-dark border">${t.channel}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick='startEditTopUp(${topupJson})' title="Editar recarga">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `}).join('');
+            } catch (error) {
+                console.error("Error al cargar recargas:", error);
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Error cargando información.</td></tr>';
+            }
+        };
+
+        // ====== 3. Iniciar modo de Edición ======
+        window.startEditTopUp = (topup) => {
+            isEditing = true;
+            document.getElementById('editingId').value = topup.id;
+            
+            // Setear valores al form
+            clientSelect.value = topup.client; // asumiendo que el ID del cliente viene en t.client
+            document.getElementById('amount').value = topup.amount;
+            document.getElementById('date').value = topup.date;
+            document.getElementById('channel').value = topup.channel;
+
+            // Cambios UI
+            formTitle.innerHTML = `<i class="bi bi-pencil-square text-warning"></i> Editar Recarga #${topup.id}`;
+            btnSubmit.innerHTML = 'Actualizar';
+            btnSubmit.classList.replace('btn-primary-custom', 'btn-warning');
+            btnCancel.classList.remove('d-none');
+            btnSubmit.classList.replace('w-100', 'w-50');
+
+            // Scroll suave hacia el form
+            document.getElementById('form-container').scrollIntoView({ behavior: 'smooth' });
+            
+            // Ocultar alerta
+            alertBox.classList.add('d-none');
+        };
+
+        // ====== 4. Resetear formulario ======
+        window.resetForm = () => {
+            isEditing = false;
+            formTopup.reset();
+            document.getElementById('editingId').value = '';
+            
+            // Fecha por default a hoy
+            document.getElementById('date').valueAsDate = new Date();
+
+            // Cambios UI devuelta a CREAR
+            formTitle.innerHTML = `<i class="bi bi-plus-circle text-primary"></i> Registrar Recarga`;
+            btnSubmit.innerHTML = 'Guardar';
+            btnSubmit.classList.replace('btn-warning', 'btn-primary-custom');
+            btnCancel.classList.add('d-none');
+            btnSubmit.classList.replace('w-50', 'w-100');
+            
+            alertBox.classList.add('d-none');
+            alertBox.classList.remove('alert-success', 'alert-danger');
+        };
+
+        // ====== 5. Guardar o Actualizar Recarga ======
+        formTopup.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const originalText = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>...';
+            btnSubmit.disabled = true;
+            alertBox.classList.add('d-none');
+
+            const payload = {
+                client: clientSelect.value,
+                amount: document.getElementById('amount').value,
+                date: document.getElementById('date').value,
+                channel: document.getElementById('channel').value
+            };
+
+            const topupId = document.getElementById('editingId').value;
+            const endpoint = isEditing ? `/analytics/topups/${topupId}/` : '/analytics/topups/';
+            const method = isEditing ? 'PUT' : 'POST';
+
+            try {
+                await fetchAPI(endpoint, {
+                    method: method,
+                    body: JSON.stringify(payload)
+                });
+
+                alertBox.innerText = isEditing ? 'Recarga actualizada con éxito ✅' : 'Recarga registrada con éxito ✅';
+                alertBox.className = 'alert alert-success py-2 px-3 text-sm mt-3';
+                
+                resetForm();
+                loadTopUps(); // recargar la tabla param ver cambios
+
+            } catch (error) {
+                alertBox.className = 'alert alert-danger py-2 px-3 text-sm mt-3';
+                if (error.data) {
+                    const errorMsgs = [];
+                    for(const key in error.data) {
+                        const val = error.data[key];
+                        errorMsgs.push(`${key}: ${Array.isArray(val) ? val.join(', ') : val}`);
+                    }
+                    alertBox.innerText = errorMsgs.join(' | ');
+                } else {
+                    alertBox.innerText = 'Error inesperado al guardar recarga.';
+                }
+            } finally {
+                btnSubmit.innerHTML = originalText;
+                btnSubmit.disabled = false;
+            }
+        });
+
+        // ====== INIT ======
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set input fecha a hoy
+            document.getElementById('date').valueAsDate = new Date();
+            loadClients();
+            loadTopUps();
+        });
+
+    </script>
+</body>
+</html>
