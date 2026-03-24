@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
     <!-- Sidebar Layout -->
@@ -27,18 +29,14 @@
             <a href="usuarios.html" class="nav-link-custom active" id="navUsers">
                 <i class="bi bi-people"></i> Gestión de Usuarios
             </a>
-            <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora">
-                <i class="bi bi-journal-text"></i> Bitácora de Login
-            </a>
-            <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig">
-                <i class="bi bi-sliders"></i> Configuración global
-            </a>
-            <a href="#" class="nav-link-custom">
+            <a href="clientes.html" class="nav-link-custom">
                 <i class="bi bi-person-lines-fill"></i> Clientes Prepago
             </a>
+
             <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
                 <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
             </a>
+
         </nav>
     </div>
 
@@ -56,7 +54,7 @@
                     <h5 class="mb-4 d-flex align-items-center gap-2">
                         <i class="bi bi-person-plus text-primary"></i> Nuevo Usuario
                     </h5>
-                    
+
                     <div id="formAlert" class="alert d-none py-2 px-3 text-sm"></div>
 
                     <form id="createUserForm">
@@ -88,11 +86,13 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-secondary small">Contraseña</label>
-                            <input type="password" id="password" class="form-control form-control-custom" minlength="8" required>
+                            <input type="password" id="password" class="form-control form-control-custom" minlength="8"
+                                required>
                         </div>
                         <div class="mb-4">
                             <label class="form-label text-secondary small">Confirmar Contraseña</label>
-                            <input type="password" id="password_confirm" class="form-control form-control-custom" minlength="8" required>
+                            <input type="password" id="password_confirm" class="form-control form-control-custom"
+                                minlength="8" required>
                         </div>
 
                         <button type="submit" id="btnSubmit" class="btn btn-primary-custom w-100">Crear Usuario</button>
@@ -106,7 +106,7 @@
                     <h5 class="mb-4 d-flex align-items-center gap-2">
                         <i class="bi bi-list-ul text-primary"></i> Lista de Usuarios
                     </h5>
-                    
+
                     <div class="table-responsive">
                         <table class="table table-borderless table-custom">
                             <thead>
@@ -146,7 +146,7 @@
             const tbody = document.getElementById('usersTableBody');
             try {
                 const data = await fetchAPI('/users/');
-                const users = data.results || data; 
+                const users = data.results || data;
 
                 if (users.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay usuarios</td></tr>';
@@ -196,11 +196,11 @@
         // Crear Usuario (RF01)
         document.getElementById('createUserForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const btn = document.getElementById('btnSubmit');
             const alert = document.getElementById('formAlert');
             const originalText = btn.innerHTML;
-            
+
             btn.innerHTML = 'Creando...';
             btn.disabled = true;
             alert.classList.add('d-none');
@@ -225,17 +225,17 @@
                 alert.innerText = 'Usuario creado con éxito ✅';
                 alert.classList.add('alert-success');
                 alert.classList.remove('d-none');
-                
+
                 e.target.reset();
                 loadUsers();
 
             } catch (error) {
                 alert.classList.add('alert-danger');
                 alert.classList.remove('d-none');
-                
+
                 if (error.data) {
                     const errorMsgs = [];
-                    for(const key in error.data) {
+                    for (const key in error.data) {
                         const val = error.data[key];
                         errorMsgs.push(`${key}: ${Array.isArray(val) ? val.join(', ') : val}`);
                     }
@@ -252,4 +252,5 @@
         loadUsers();
     </script>
 </body>
+
 </html>
