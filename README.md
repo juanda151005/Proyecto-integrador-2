@@ -6,24 +6,6 @@ y registra su intención de cambio para el equipo comercial.
 
 ---
 
-## Tabla de contenidos
-
-- [Requisitos previos](#requisitos-previos)
-- [Tecnologías utilizadas](#tecnologías-utilizadas)
-- [Estructura del proyecto](#estructura-del-proyecto)
-- [Instalación local (sin Docker)](#instalación-local-sin-docker)
-- [Instalación con Docker](#instalación-con-docker)
-- [Variables de entorno](#variables-de-entorno)
-- [Migraciones y base de datos](#migraciones-y-base-de-datos)
-- [Correr el servidor](#correr-el-servidor)
-- [Correr los tests](#correr-los-tests)
-- [Frontend](#frontend)
-- [Documentación de la API](#documentación-de-la-api)
-- [Antes de hacer un commit](#antes-de-hacer-un-commit)
-- [Flujo de trabajo Git](#flujo-de-trabajo-git)
-
----
-
 ## Requisitos previos
 
 Tener instalado en tu máquina antes de clonar el proyecto:
