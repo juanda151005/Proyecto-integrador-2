@@ -1,9 +1,26 @@
-# Proyecto-integrador-2
 # Sistema Inteligente de Migración de Clientes Prepago a Postpago
 
 Sistema backend en Django REST Framework que identifica clientes prepago con alto
 potencial de migración, les envía ofertas automáticas vía WhatsApp/SMS usando Twilio,
 y registra su intención de cambio para el equipo comercial.
+
+---
+
+## Tabla de contenidos
+
+- [Requisitos previos](#requisitos-previos)
+- [Tecnologías utilizadas](#tecnologías-utilizadas)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Instalación local (sin Docker)](#instalación-local-sin-docker)
+- [Instalación con Docker](#instalación-con-docker)
+- [Variables de entorno](#variables-de-entorno)
+- [Migraciones y base de datos](#migraciones-y-base-de-datos)
+- [Correr el servidor](#correr-el-servidor)
+- [Correr los tests](#correr-los-tests)
+- [Frontend](#frontend)
+- [Documentación de la API](#documentación-de-la-api)
+- [Antes de hacer un commit](#antes-de-hacer-un-commit)
+- [Flujo de trabajo Git](#flujo-de-trabajo-git)
 
 ---
 
@@ -388,5 +405,4 @@ git push origin feature/nombre-descriptivo
 | Juan David Velásquez Restrepo | Desarrollador backend |
 | Esteban Salazar Orozco | Diseñador / UX |
 | Emmanuel Castañeda Cano | Analista de negocio | 
-| Jean Paul Guillot Gallego | Documentador y tester | 
 
