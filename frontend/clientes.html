@@ -369,9 +369,10 @@
                             <button class="btn btn-sm btn-outline-primary me-1" title="Editar" onclick="openEditModal(${c.id})">
                                 <i class="bi bi-pencil"></i>
                             </button>
+                            ${SecurityService.hasRole(['ADMIN']) ? `
                             <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmDelete(${c.id}, '${c.full_name.replace(/'/g, "\\'")}')" data-rbac-roles="ADMIN">
                                 <i class="bi bi-trash"></i>
-                            </button>
+                            </button>` : ''}
                         </td>
                     </tr>
                 `).join('');
