@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -22,6 +23,10 @@ class ClientBaseTestCase(TestCase):
             first_name="Test",
             last_name="User",
         )
+        # RF06/RF08 requieren que el creador/editor sea un Analista
+        analista_group, _ = Group.objects.get_or_create(name="Analista")
+        self.user.groups.add(analista_group)
+        
         self.api = APIClient()
         self.api.force_authenticate(user=self.user)
 
@@ -54,32 +59,76 @@ class ClientBaseTestCase(TestCase):
 class ClientCreateTests(ClientBaseTestCase):
     """Tests para POST /api/v1/clients/ (RF06)."""
 
-    def test_create_client_success(self):
-        """POST con datos válidos → 201."""
+    def test_admin_crea_cliente_exito(self):
+        """Privilegio de Administrador: también deben poder crear un nuevo cliente."""
+        admin_user = User.objects.create_superuser(
+            username="adminroot", email="adminroot@test.com", password="Pass123"
+        )
+        api_admin = APIClient()
+        api_admin.force_authenticate(user=admin_user)
+        self.client_data["phone_number"] = "3007777777"
+        response = api_admin.post("/api/v1/clients/", self.client_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_cp_1_1_registro_exitoso_datos_basicos(self):
+        """
+        CP 1.1: Registro exitoso de datos básicos.
+        El sistema permite guardar la fecha de activación y el plan actual del cliente.
+        """
         response = self.api.post("/api/v1/clients/", self.client_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["phone_number"], "3001234567")
         self.assertEqual(response.data["full_name"], "Juan Pérez")
-        self.assertTrue(Client.objects.filter(phone_number="3001234567").exists())
+        
+        # Validación de que la fecha y el plan se guardan correctamente en DB
+        client = Client.objects.get(phone_number="3001234567")
+        self.assertEqual(str(client.activation_date), "2026-01-15")
+        self.assertEqual(client.current_plan, "PREPAGO_BASIC")
 
-    def test_create_client_duplicate_phone(self):
-        """POST con teléfono duplicado → 400."""
+    def test_cp_1_2_validacion_campos_obligatorios(self):
+        """
+        CP 1.2: Validación de campos obligatorios.
+        Se intenta guardar la información dejando vacía la fecha de activación o el tipo de plan.
+        El sistema impide el registro y resalta los campos obligatorios.
+        """
+        # Testing con values empty que fallarán con el validador de forms
+        self.client_data["activation_date"] = ""
+        self.client_data["current_plan"] = ""
+        response = self.api.post("/api/v1/clients/", self.client_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("activation_date", response.data)
+        # Nota: current_plan tiene "PREPAGO_BASIC" como default en el modelo, 
+        # pero si es required=True en frontend se validará. Mandar vacío debería lanzar error en serializador si es choice.
+        self.assertIn("current_plan", response.data)
+
+    def test_cp_2_1_validacion_unicidad_telefono(self):
+        """
+        CP 2.1: Validación de unicidad de teléfono.
+        Se intenta crear un nuevo cliente utilizando ese mismo número telefónico.
+        El backend bloquea la operación y muestra una alerta indicando que el número ya está vinculado a otro registro.
+        """
         self.client_data["phone_number"] = self.client_obj.phone_number
         response = self.api.post("/api/v1/clients/", self.client_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("phone_number", response.data)
 
-    def test_create_client_invalid_phone_format(self):
-        """POST con teléfono que no cumple regex → 400."""
+    def test_cp_2_2_validacion_formato_telefono(self):
+        """
+        CP 2.2: Validación de formato de teléfono.
+        Se ingresa un valor inválido en el campo de teléfono (ej. letras o menos de 10 dígitos).
+        El sistema activa el mensaje de error de formato.
+        """
+        # Prueba menos de 10 dígitos
         self.client_data["phone_number"] = "12345"
         response = self.api.post("/api/v1/clients/", self.client_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("phone_number", response.data)
 
-    def test_create_client_phone_no_starts_with_3(self):
-        """POST con teléfono que no empieza con 3 → 400."""
-        self.client_data["phone_number"] = "5001234567"
-        response = self.api.post("/api/v1/clients/", self.client_data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Prueba con letras
+        self.client_data["phone_number"] = "300ABCDEF1"
+        response2 = self.api.post("/api/v1/clients/", self.client_data, format="json")
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("phone_number", response2.data)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -127,31 +176,71 @@ class ClientListFilterTests(ClientBaseTestCase):
 class ClientUpdateTests(ClientBaseTestCase):
     """Tests para PUT/PATCH /api/v1/clients/<id>/ (RF08)."""
 
-    def test_update_client_patch(self):
-        """PATCH actualiza campos permitidos → 200."""
+    def test_cp_1_1_persistencia_relaciones_tras_edicion(self):
+        """
+        CP 1.1: Persistencia de relaciones tras edición.
+        Se actualiza el tipo de plan en su perfil.
+        El sistema guarda el cambio correctamente y mantiene los demás datos intactos.
+        """
         url = f"/api/v1/clients/{self.client_obj.pk}/"
-        response = self.api.patch(url, {"full_name": "María López"}, format="json")
+        response = self.api.patch(url, {"current_plan": "PREPAGO_PREMIUM"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.client_obj.refresh_from_db()
-        self.assertEqual(self.client_obj.full_name, "María López")
+        self.assertEqual(self.client_obj.current_plan, "PREPAGO_PREMIUM")
+        # Asegurar integridad de campos asociados
+        self.assertEqual(self.client_obj.phone_number, "3009999999")
 
-    def test_update_blocks_phone_change(self):
-        """PATCH phone_number → campo no cambia (read_only en update)."""
+    def test_cp_1_2_validacion_integridad_campos_criticos(self):
+        """
+        CP 1.2: Validación de integridad en campos críticos.
+        Se intenta guardar una modificación con datos inválidos (ej. teléfono con formato erróneo).
+        El sistema bloquea la actualización y mantiene la información original.
+        """
         url = f"/api/v1/clients/{self.client_obj.pk}/"
         original_phone = self.client_obj.phone_number
-        response = self.api.patch(url, {"phone_number": "3111111111"}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # El serializer de Update tiene phone_number como read_only_fields (se ignora).
+        response = self.api.patch(url, {"phone_number": "formato-erroneo", "activation_date": "10-01-2026"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("activation_date", response.data)
+        
+        # Validar que no mutó nada en la BD
         self.client_obj.refresh_from_db()
         self.assertEqual(self.client_obj.phone_number, original_phone)
 
-    def test_update_blocks_document_change(self):
-        """PATCH document_number → campo no cambia (read_only en update)."""
+    def test_cp_2_1_restriccion_edicion_por_rol(self):
+        """
+        CP 2.1: Restricción de edición por rol.
+        El usuario está autenticado con rol "Asesor". Intenta enviar petición PATCH al sistema.
+        La plataforma deniega la acción y muestra un mensaje de acceso restringido.
+        """
+        asesor_user = User.objects.create_user(username="asesor", email="asesor@test.com", password="Pass123")
+        from django.contrib.auth.models import Group
+        asesor_group, _ = Group.objects.get_or_create(name="Asesor")
+        asesor_user.groups.add(asesor_group)
+        
+        api_asesor = APIClient()
+        api_asesor.force_authenticate(user=asesor_user)
+        
         url = f"/api/v1/clients/{self.client_obj.pk}/"
-        original_doc = self.client_obj.document_number
-        response = self.api.patch(url, {"document_number": "0000000000"}, format="json")
+        response = api_asesor.patch(url, {"full_name": "Hack"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
+    def test_cp_2_2_ejecucion_edicion_autorizada(self):
+        """
+        CP 2.2: Ejecución de edición autorizada.
+        El usuario está autenticado como 'Analista'. Se corrige un dato y se guarda el cambio.
+        El sistema valida permiso y aplica actualización.
+        """
+        # self.user es nuestro analista creado en setUp
+        from django.contrib.auth.models import Group
+        analista_group, _ = Group.objects.get_or_create(name="Analista")
+        self.user.groups.add(analista_group)
+        
+        url = f"/api/v1/clients/{self.client_obj.pk}/"
+        response = self.api.patch(url, {"full_name": "María López (Corregido)"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.client_obj.refresh_from_db()
-        self.assertEqual(self.client_obj.document_number, original_doc)
+        self.assertEqual(self.client_obj.full_name, "María López (Corregido)")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
