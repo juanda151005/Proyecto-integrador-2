@@ -1,4 +1,5 @@
 from django.urls import path
+
 from . import views
 
 app_name = "users"
@@ -11,7 +12,7 @@ urlpatterns = [
     path("me/", views.VerifyTokenView.as_view(), name="user-me"),
     # RF04 — Perfil del usuario autenticado
     path("profile/", views.ProfileView.as_view(), name="profile"),
-    # RF03 — Cambio de contraseña
+    # RF03 — Cambio de contraseña (usuario autenticado)
     path(
         "change-password/", views.ChangePasswordView.as_view(), name="change-password"
     ),

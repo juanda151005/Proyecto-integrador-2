@@ -347,3 +347,228 @@ class RBACMiddlewareTest(TestCase):
         data = response.json()
         # El middleware retorna detail con info, o DRF retorna su propio 403
         self.assertIn("detail", data)
+
+
+# =============================================================================
+# Tests para RF06 — Recuperación de contraseña por email
+# =============================================================================
+
+
+class PasswordResetRequestViewTest(TestCase):
+    """Tests para la solicitud de recuperación de contraseña (RF06)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = CustomUser.objects.create_user(
+            username="reset_user",
+            email="reset@example.com",
+            password="OldPass123*",
+            first_name="Juan",
+            is_active=True,
+        )
+
+    def test_request_with_registered_email_returns_200(self):
+        """RF06: Solicitar reset con email registrado retorna 200."""
+        response = self.client.post(
+            "/api/v1/auth/password-reset/",
+            {"email": "reset@example.com"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("detail", response.json())
+
+    def test_request_with_unknown_email_also_returns_200(self):
+        """RF06: Solicitar reset con email desconocido también retorna 200 (seguridad)."""
+        response = self.client.post(
+            "/api/v1/auth/password-reset/",
+            {"email": "noexiste@example.com"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_request_with_invalid_email_format_returns_400(self):
+        """RF06: Email con formato inválido retorna 400."""
+        response = self.client.post(
+            "/api/v1/auth/password-reset/",
+            {"email": "no-es-un-email"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_request_does_not_require_authentication(self):
+        """RF06: El endpoint de solicitud es público (no requiere token)."""
+        # Sin force_authenticate — debe funcionar igual
+        response = self.client.post(
+            "/api/v1/auth/password-reset/",
+            {"email": "reset@example.com"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class PasswordResetConfirmViewTest(TestCase):
+    """Tests para la confirmación de reset de contraseña (RF06)."""
+
+    def setUp(self):
+        from django.contrib.auth.tokens import PasswordResetTokenGenerator
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
+        self.client = APIClient()
+        self.user = CustomUser.objects.create_user(
+            username="confirm_user",
+            email="confirm@example.com",
+            password="OldPass123*",
+            is_active=True,
+        )
+        # Generar un token válido para este usuario
+        generator = PasswordResetTokenGenerator()
+        self.uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        self.token = generator.make_token(self.user)
+
+    def test_valid_token_resets_password(self):
+        """RF06: Token válido + nueva contraseña → contraseña cambiada."""
+        response = self.client.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "uid": self.uid,
+                "token": self.token,
+                "new_password": "NewSecure123*",
+                "new_password_confirm": "NewSecure123*",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Verificar que la contraseña realmente cambió
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NewSecure123*"))
+        self.assertFalse(self.user.check_password("OldPass123*"))
+
+    def test_invalid_token_returns_400(self):
+        """RF06: Token manipulado / inválido retorna 400."""
+        response = self.client.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "uid": self.uid,
+                "token": "token-completamente-falso",
+                "new_password": "NewSecure123*",
+                "new_password_confirm": "NewSecure123*",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("detail", response.json())
+
+    def test_invalid_uid_returns_400(self):
+        """RF06: UID inválido / no corresponde a ningún usuario retorna 400."""
+        response = self.client.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "uid": "uid-que-no-existe",
+                "token": self.token,
+                "new_password": "NewSecure123*",
+                "new_password_confirm": "NewSecure123*",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_mismatch_returns_400(self):
+        """RF06: Contraseñas que no coinciden retornan 400 antes de tocar el token."""
+        response = self.client.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "uid": self.uid,
+                "token": self.token,
+                "new_password": "NewSecure123*",
+                "new_password_confirm": "Diferente999*",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_token_invalidated_after_use(self):
+        """RF06: El token queda inválido después de usar (contraseña guardada cambia el hash)."""
+        # Primer uso — exitoso
+        self.client.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "uid": self.uid,
+                "token": self.token,
+                "new_password": "NewSecure123*",
+                "new_password_confirm": "NewSecure123*",
+            },
+            format="json",
+        )
+        # Segundo uso con el mismo token — debe fallar
+        response = self.client.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "uid": self.uid,
+                "token": self.token,
+                "new_password": "AnotherPass456*",
+                "new_password_confirm": "AnotherPass456*",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_confirm_does_not_require_authentication(self):
+        """RF06: El endpoint de confirmación es público (no requiere token JWT)."""
+        response = self.client.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "uid": self.uid,
+                "token": self.token,
+                "new_password": "NewSecure123*",
+                "new_password_confirm": "NewSecure123*",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class PasswordResetServiceTest(TestCase):
+    """Tests unitarios del service layer de RF06."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username="svc_reset",
+            email="svc_reset@example.com",
+            password="OldPass123*",
+            is_active=True,
+        )
+
+    def test_generate_and_validate_token(self):
+        """RF06: El token generado puede ser validado correctamente."""
+        from .services import (
+            generate_password_reset_link,
+            validate_password_reset_token,
+        )
+
+        link = generate_password_reset_link(self.user)
+        # Extraer uid y token del link
+        parts = link.rstrip("/").split("/")
+        token = parts[-1]
+        uid = parts[-2]
+
+        validated_user = validate_password_reset_token(uid, token)
+        self.assertIsNotNone(validated_user)
+        self.assertEqual(validated_user.pk, self.user.pk)
+
+    def test_validate_invalid_token_returns_none(self):
+        """RF06: Token inválido retorna None."""
+        from .services import validate_password_reset_token
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        result = validate_password_reset_token(uid, "token-falso-xyz")
+        self.assertIsNone(result)
+
+    def test_validate_nonexistent_uid_returns_none(self):
+        """RF06: UID de usuario inexistente retorna None."""
+        from .services import validate_password_reset_token
+
+        result = validate_password_reset_token("uidinvalido", "cualquier-token")
+        self.assertIsNone(result)

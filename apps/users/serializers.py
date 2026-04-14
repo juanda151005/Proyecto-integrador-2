@@ -25,6 +25,7 @@ class UserSerializer(serializers.ModelSerializer):
             "role",
             "role_display",
             "phone_number",
+            "photo",
             "is_active",
             "created_at",
             "updated_at",
@@ -156,7 +157,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ["first_name", "last_name", "email", "phone_number"]
+        fields = ["first_name", "last_name", "email", "phone_number", "photo"]
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -180,3 +181,54 @@ class LoginAttemptSerializer(serializers.ModelSerializer):
             "timestamp",
         ]
         read_only_fields = ["id", "timestamp"]
+
+
+# =============================================================================
+# RF06 — Recuperación de contraseña por email
+# =============================================================================
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """
+    RF06 — Solicitud de recuperación de contraseña.
+
+    Valida que el correo exista en el sistema.
+    Siempre retorna 200 (no revela si el email existe o no por seguridad).
+    """
+
+    email = serializers.EmailField(
+        help_text="Correo electrónico registrado en el sistema."
+    )
+
+    def validate_email(self, value):
+        return value.lower()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """
+    RF06 — Confirmación del reset con nuevo password.
+
+    Valida el token HMAC y aplica las reglas de contraseña.
+    """
+
+    uid = serializers.CharField(help_text="UID de usuario codificado en base64.")
+    token = serializers.CharField(help_text="Token de recuperación.")
+    new_password = serializers.CharField(
+        min_length=8,
+        write_only=True,
+        style={"input_type": "password"},
+        help_text="Nueva contraseña (mínimo 8 caracteres).",
+    )
+    new_password_confirm = serializers.CharField(
+        min_length=8,
+        write_only=True,
+        style={"input_type": "password"},
+        help_text="Repite la nueva contraseña.",
+    )
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password_confirm"]:
+            raise serializers.ValidationError(
+                {"new_password_confirm": "Las contraseñas no coinciden."}
+            )
+        return attrs
