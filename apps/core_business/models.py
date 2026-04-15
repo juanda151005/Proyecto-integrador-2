@@ -50,6 +50,15 @@ class Client(models.Model):
         default=False,
         verbose_name="¿Elegible para postpago?",
     )
+    is_test_eligible = models.BooleanField(
+        default=False,
+        verbose_name="[TEST] ¿Elegible para oferta? (RF15)",
+        help_text=(
+            "Campo temporal para pruebas del RF15. "
+            "Marca al cliente para recibir la oferta sin depender del RF12. "
+            "Reemplazar por is_eligible cuando el motor de reglas esté listo."
+        ),
+    )
     average_spending = models.DecimalField(
         max_digits=12,
         decimal_places=2,
