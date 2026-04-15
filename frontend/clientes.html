@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes Prepago - Smart Migration System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <!-- Sidebar Layout -->
+    <div class="sidebar">
+        <div class="d-flex align-items-center gap-2 mb-5 px-2">
+            <i class="bi bi-rocket-takeoff text-primary fs-3"></i>
+            <h4 class="mb-0 fw-bold">SmartMig</h4>
+        </div>
+
+                <nav class="nav flex-column gap-1">
+            <a href="dashboard.html" class="nav-link-custom">
+                <i class="bi bi-house-door"></i> Inicio
+            </a>
+            
+            <a href="recargas.html" class="nav-link-custom" id="navRecargas">
+                <i class="bi bi-cash-stack"></i> Registro de Recargas
+            </a>
+            
+            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers" data-rbac-roles="ADMIN">
+                <i class="bi bi-people"></i> Gestión de Usuarios
+            </a>
+            
+            <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora" data-rbac-roles="ADMIN">
+                <i class="bi bi-journal-text"></i> Bitácora de Login
+            </a>
+            
+            <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN">
+                <i class="bi bi-sliders"></i> Configuración global
+            </a>
+            
+            <a href="clientes.html" class="nav-link-custom active">
+                <i class="bi bi-person-lines-fill"></i> Clientes Prepago
+            </a>
+            
+            <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
+                <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content fade-in">
+        <header class="mb-4">
+            <h2 class="fw-bold">Clientes Prepago</h2>
+            <!--<p class="text-secondary mb-0">RF06–RF10: Gestión completa del ciclo de vida de clientes prepago.</p>-->
+        </header>
+
+        <!-- ══════════════ Barra de Acciones ══════════════ -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <button class="btn btn-primary-custom" onclick="openCreateModal()">
+                <i class="bi bi-plus-lg me-1"></i> Nuevo Cliente
+            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-secondary-custom" onclick="exportCSV()">
+                    <i class="bi bi-download me-1"></i> Exportar CSV
+                </button>
+                <button class="btn btn-outline-secondary rounded-pill px-3" onclick="toggleFilters()">
+                    <i class="bi bi-funnel me-1"></i> Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- ══════════════ Panel de Filtros ══════════════ -->
+        <div class="glass-panel p-4 mb-4 d-none" id="filtersPanel">
+            <h6 class="fw-bold mb-3"><i class="bi bi-funnel text-primary me-1"></i> Filtros de Búsqueda</h6>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label text-secondary small">Búsqueda</label>
+                    <input type="text" id="filterSearch" class="form-control form-control-custom"
+                        placeholder="Nombre o teléfono...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-secondary small">Plan</label>
+                    <select id="filterPlan" class="form-select form-control-custom">
+                        <option value="">Todos</option>
+                        <option value="PREPAGO_BASIC">Básico</option>
+                        <option value="PREPAGO_PLUS">Plus</option>
+                        <option value="PREPAGO_PREMIUM">Premium</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-secondary small">Estado</label>
+                    <select id="filterStatus" class="form-select form-control-custom">
+                        <option value="">Todos</option>
+                        <option value="ACTIVE">Activo</option>
+                        <option value="INACTIVE">Inactivo</option>
+                        <option value="MIGRATED">Migrado</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-secondary small">Elegible</label>
+                    <select id="filterEligible" class="form-select form-control-custom">
+                        <option value="">Todos</option>
+                        <option value="true">Sí</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-secondary small">Gasto promedio</label>
+                    <div class="d-flex gap-2">
+                        <input type="number" id="filterMinSpending" class="form-control form-control-custom"
+                            placeholder="Mín">
+                        <input type="number" id="filterMaxSpending" class="form-control form-control-custom"
+                            placeholder="Máx">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-secondary small">Activación desde</label>
+                    <input type="date" id="filterDateFrom" class="form-control form-control-custom">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-secondary small">Activación hasta</label>
+                    <input type="date" id="filterDateTo" class="form-control form-control-custom">
+                </div>
+                <div class="col-md-6 d-flex align-items-end gap-2">
+                    <button class="btn btn-primary-custom" onclick="loadClients()">
+                        <i class="bi bi-search me-1"></i> Buscar
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                        <i class="bi bi-x-circle me-1"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ Tabla de Clientes ══════════════ -->
+        <div class="glass-panel p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-table text-primary"></i> Lista de Clientes
+                </h5>
+                <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill" id="clientCount">0
+                    registros</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-borderless table-custom table-hover">
+                    <thead>
+                        <tr>
+                            <th>Teléfono</th>
+                            <th>Nombre</th>
+                            <th>Documento</th>
+                            <th>Plan</th>
+                            <th>Estado</th>
+                            <th>Elegible</th>
+                            <th>Gasto Prom.</th>
+                            <th>Activación</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientsTableBody">
+                        <tr>
+                            <td colspan="9" class="text-center text-secondary py-4">Cargando clientes...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <nav id="paginationNav" class="d-flex justify-content-center mt-3">
+                <ul class="pagination pagination-sm" id="paginationList"></ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- ══════════════ Modal Crear / Editar Cliente ══════════════ -->
+    <div class="modal fade" id="clientModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0" style="background: var(--bg-gradient-start);">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="modalTitle">
+                        <i class="bi bi-person-plus text-primary me-2"></i>Nuevo Cliente
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <div id="modalAlert" class="alert d-none py-2 px-3 text-sm"></div>
+
+                    <form id="clientForm">
+                        <input type="hidden" id="clientId">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-secondary small">Número de celular *</label>
+                                <input type="text" id="phone_number" class="form-control form-control-custom"
+                                    placeholder="3001234567" maxlength="10" required>
+                                <div class="form-text text-secondary">10 dígitos, inicia con 3</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-secondary small">Nombre completo *</label>
+                                <input type="text" id="full_name" class="form-control form-control-custom"
+                                    placeholder="Juan Pérez" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-secondary small">Número de documento *</label>
+                                <input type="text" id="document_number" class="form-control form-control-custom"
+                                    placeholder="1234567890" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-secondary small">Correo electrónico</label>
+                                <input type="email" id="email" class="form-control form-control-custom"
+                                    placeholder="juan@ejemplo.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-secondary small">Fecha de activación *</label>
+                                <input type="date" id="activation_date" class="form-control form-control-custom"
+                                    required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-secondary small">Plan *</label>
+                                <select id="current_plan" class="form-select form-control-custom" required>
+                                    <option value="PREPAGO_BASIC">Prepago Básico</option>
+                                    <option value="PREPAGO_PLUS">Prepago Plus</option>
+                                    <option value="PREPAGO_PREMIUM">Prepago Premium</option>
+                                </select>
+                            </div>
+                            <!-- Estado: solo visible al editar -->
+                            <div class="col-md-6 d-none" id="statusGroup">
+                                <label class="form-label text-secondary small">Estado</label>
+                                <select id="status" class="form-select form-control-custom">
+                                    <option value="ACTIVE">Activo</option>
+                                    <option value="INACTIVE">Inactivo</option>
+                                    <option value="MIGRATED">Migrado a Postpago</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" id="btnSubmitClient" class="btn btn-primary-custom">
+                                <i class="bi bi-check-lg me-1"></i> Guardar
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════ Modal Confirmar Eliminación ══════════════ -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content border-0" style="background: var(--bg-gradient-start);">
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-exclamation-triangle text-danger fs-1 mb-3 d-block"></i>
+                    <h6 class="fw-bold">¿Eliminar este cliente?</h6>
+                    <p class="text-secondary small mb-0" id="deleteClientName"></p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pt-0">
+                    <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" id="btnConfirmDelete">
+                        <i class="bi bi-trash me-1"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        // ── Protección de ruta e inicialización RBAC ──
+        SecurityService.initPage();
+
+
+        // ── Estado global ──
+        let currentPage = 1;
+        let editingId = null;
+
+        const PLAN_LABELS = {
+            'PREPAGO_BASIC': 'Básico',
+            'PREPAGO_PLUS': 'Plus',
+            'PREPAGO_PREMIUM': 'Premium'
+        };
+        const PLAN_COLORS = {
+            'PREPAGO_BASIC': 'bg-info',
+            'PREPAGO_PLUS': 'bg-primary',
+            'PREPAGO_PREMIUM': 'bg-warning text-dark'
+        };
+        const STATUS_LABELS = {
+            'ACTIVE': 'Activo',
+            'INACTIVE': 'Inactivo',
+            'MIGRATED': 'Migrado'
+        };
+        const STATUS_COLORS = {
+            'ACTIVE': 'text-success',
+            'INACTIVE': 'text-secondary',
+            'MIGRATED': 'text-primary'
+        };
+
+        // ══════════════ Construir Query String de Filtros ══════════════
+        function buildFilterQuery() {
+            const params = new URLSearchParams();
+            const search = document.getElementById('filterSearch').value.trim();
+            const plan = document.getElementById('filterPlan').value;
+            const status = document.getElementById('filterStatus').value;
+            const eligible = document.getElementById('filterEligible').value;
+            const minSpending = document.getElementById('filterMinSpending').value;
+            const maxSpending = document.getElementById('filterMaxSpending').value;
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+
+            if (search) params.append('search', search);
+            if (plan) params.append('current_plan', plan);
+            if (status) params.append('status', status);
+            if (eligible) params.append('is_eligible', eligible);
+            if (minSpending) params.append('min_spending', minSpending);
+            if (maxSpending) params.append('max_spending', maxSpending);
+            if (dateFrom) params.append('activation_after', dateFrom);
+            if (dateTo) params.append('activation_before', dateTo);
+
+            return params.toString();
+        }
+
+        // ══════════════ Cargar Clientes (GET con paginación y filtros) ══════════════
+        async function loadClients(page = 1) {
+            currentPage = page;
+            const tbody = document.getElementById('clientsTableBody');
+            const filterQuery = buildFilterQuery();
+            let url = `/clients/?page=${page}`;
+            if (filterQuery) url += `&${filterQuery}`;
+
+            try {
+                const data = await fetchAPI(url);
+                const clients = data.results || data;
+                const count = data.count || clients.length;
+
+                document.getElementById('clientCount').textContent = `${count} registro${count !== 1 ? 's' : ''}`;
+
+                if (clients.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-secondary py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No se encontraron clientes</td></tr>';
+                    document.getElementById('paginationList').innerHTML = '';
+                    return;
+                }
+
+                tbody.innerHTML = clients.map(c => `
+                    <tr>
+                        <td class="fw-medium">${c.phone_number}</td>
+                        <td>${c.full_name}</td>
+                        <td class="text-secondary">${c.document_number}</td>
+                        <td>
+                            <span class="badge ${PLAN_COLORS[c.current_plan] || 'bg-secondary'} bg-opacity-75 rounded-pill px-3">
+                                ${PLAN_LABELS[c.current_plan] || c.current_plan}
+                            </span>
+                        </td>
+                        <td>
+                            <i class="bi bi-circle-fill small ${STATUS_COLORS[c.status] || 'text-secondary'}"></i>
+                            ${STATUS_LABELS[c.status] || c.status}
+                        </td>
+                        <td>${c.is_eligible
+                        ? '<span class="badge bg-success bg-opacity-10 text-success">Sí</span>'
+                        : '<span class="badge bg-secondary bg-opacity-10 text-secondary">No</span>'}
+                        </td>
+                        <td>$${Number(c.average_spending).toLocaleString('es-CO')}</td>
+                        <td>${c.activation_date}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary me-1" title="Editar" onclick="openEditModal(${c.id})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            ${SecurityService.hasRole(['ADMIN']) ? `
+                            <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmDelete(${c.id}, '${c.full_name.replace(/'/g, "\\'")}')" data-rbac-roles="ADMIN">
+                                <i class="bi bi-trash"></i>
+                            </button>` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Paginación
+                renderPagination(data);
+
+            } catch (error) {
+                console.error('Error al cargar clientes:', error);
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-4">Error al cargar clientes</td></tr>';
+            }
+        }
+
+        // ══════════════ Paginación ══════════════
+        function renderPagination(data) {
+            const list = document.getElementById('paginationList');
+            if (!data.count || data.count <= 20) {
+                list.innerHTML = '';
+                return;
+            }
+            const totalPages = Math.ceil(data.count / 20);
+            let html = '';
+
+            html += `<li class="page-item ${!data.previous ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="event.preventDefault(); loadClients(${currentPage - 1})">«</a>
+                     </li>`;
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                                <a class="page-link" href="#" onclick="event.preventDefault(); loadClients(${i})">${i}</a>
+                             </li>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += '<li class="page-item disabled"><span class="page-link">…</span></li>';
+                }
+            }
+
+            html += `<li class="page-item ${!data.next ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="event.preventDefault(); loadClients(${currentPage + 1})">»</a>
+                     </li>`;
+
+            list.innerHTML = html;
+        }
+
+        // ══════════════ Modal Crear ══════════════
+        function openCreateModal() {
+            editingId = null;
+            document.getElementById('clientForm').reset();
+            document.getElementById('clientId').value = '';
+            document.getElementById('modalTitle').innerHTML = '<i class="bi bi-person-plus text-primary me-2"></i>Nuevo Cliente';
+            document.getElementById('modalAlert').classList.add('d-none');
+            document.getElementById('statusGroup').classList.add('d-none');
+            // Habilitar campos de identidad
+            document.getElementById('phone_number').removeAttribute('readonly');
+            document.getElementById('document_number').removeAttribute('readonly');
+            new bootstrap.Modal(document.getElementById('clientModal')).show();
+        }
+
+        // ══════════════ Modal Editar ══════════════
+        async function openEditModal(id) {
+            editingId = id;
+            document.getElementById('modalAlert').classList.add('d-none');
+
+            try {
+                const client = await fetchAPI(`/clients/${id}/`);
+                document.getElementById('clientId').value = client.id;
+                document.getElementById('phone_number').value = client.phone_number;
+                document.getElementById('full_name').value = client.full_name;
+                document.getElementById('document_number').value = client.document_number;
+                document.getElementById('email').value = client.email || '';
+                document.getElementById('activation_date').value = client.activation_date;
+                document.getElementById('current_plan').value = client.current_plan;
+                document.getElementById('status').value = client.status;
+
+                document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i>Editar Cliente';
+                document.getElementById('statusGroup').classList.remove('d-none');
+                // Bloquear campos de identidad en edición
+                document.getElementById('phone_number').setAttribute('readonly', true);
+                document.getElementById('document_number').setAttribute('readonly', true);
+
+                new bootstrap.Modal(document.getElementById('clientModal')).show();
+            } catch (error) {
+                console.error('Error al cargar cliente:', error);
+                showToast('Error al cargar datos del cliente', 'danger');
+            }
+        }
+
+        // ══════════════ Guardar (Crear o Editar) ══════════════
+        document.getElementById('clientForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitClient');
+            const alert = document.getElementById('modalAlert');
+            const originalText = btn.innerHTML;
+
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
+            btn.disabled = true;
+            alert.classList.add('d-none');
+            alert.classList.remove('alert-success', 'alert-danger');
+
+            const payload = {
+                phone_number: document.getElementById('phone_number').value,
+                full_name: document.getElementById('full_name').value,
+                document_number: document.getElementById('document_number').value,
+                email: document.getElementById('email').value,
+                activation_date: document.getElementById('activation_date').value,
+                current_plan: document.getElementById('current_plan').value,
+            };
+
+            if (editingId) {
+                payload.status = document.getElementById('status').value;
+            }
+
+            try {
+                if (editingId) {
+                    await fetchAPI(`/clients/${editingId}/`, {
+                        method: 'PATCH',
+                        body: JSON.stringify(payload)
+                    });
+                    alert.innerText = 'Cliente actualizado con éxito ✅';
+                } else {
+                    await fetchAPI('/clients/', {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    alert.innerText = 'Cliente registrado con éxito ✅';
+                }
+
+                alert.classList.add('alert-success');
+                alert.classList.remove('d-none');
+
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('clientModal')).hide();
+                    loadClients(currentPage);
+                }, 800);
+
+            } catch (error) {
+                alert.classList.add('alert-danger');
+                alert.classList.remove('d-none');
+                if (error.data) {
+                    const msgs = [];
+                    for (const key in error.data) {
+                        const val = Array.isArray(error.data[key]) ? error.data[key].join(', ') : error.data[key];
+                        msgs.push(`${key}: ${val}`);
+                    }
+                    alert.innerText = msgs.join(' | ');
+                } else {
+                    alert.innerText = 'Error inesperado al guardar.';
+                }
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // ══════════════ Eliminar ══════════════
+        let deleteId = null;
+
+        function confirmDelete(id, name) {
+            deleteId = id;
+            document.getElementById('deleteClientName').textContent = name;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+
+        document.getElementById('btnConfirmDelete').addEventListener('click', async () => {
+            if (!deleteId) return;
+            const btn = document.getElementById('btnConfirmDelete');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            btn.disabled = true;
+
+            try {
+                await fetchAPI(`/clients/${deleteId}/`, { method: 'DELETE' });
+                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                loadClients(currentPage);
+            } catch (error) {
+                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                if (error.data && error.data.detail) {
+                    showToast(error.data.detail, 'danger');
+                } else {
+                    showToast('Error al eliminar el cliente.', 'danger');
+                }
+            } finally {
+                btn.innerHTML = '<i class="bi bi-trash me-1"></i> Eliminar';
+                btn.disabled = false;
+                deleteId = null;
+            }
+        });
+
+        // ══════════════ Exportar CSV ══════════════
+        function exportCSV() {
+            const token = SecurityService.getToken();
+            const filterQuery = buildFilterQuery();
+            let url = `${API_BASE_URL}/clients/export/csv/`;
+            if (filterQuery) url += `?${filterQuery}`;
+
+            // Descargar con fetch para enviar token JWT
+            fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error('Error al exportar');
+                    return res.blob();
+                })
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'clientes.csv';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    showToast('CSV descargado correctamente ✅', 'success');
+                })
+                .catch(() => showToast('Error al descargar el CSV', 'danger'));
+        }
+
+        // ══════════════ Filtros Toggle / Clear ══════════════
+        function toggleFilters() {
+            document.getElementById('filtersPanel').classList.toggle('d-none');
+        }
+
+        function clearFilters() {
+            document.getElementById('filterSearch').value = '';
+            document.getElementById('filterPlan').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterEligible').value = '';
+            document.getElementById('filterMinSpending').value = '';
+            document.getElementById('filterMaxSpending').value = '';
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            loadClients(1);
+        }
+
+        // ══════════════ Toast de Notificación ══════════════
+        function showToast(message, type = 'info') {
+            // Crear toast flotante
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'danger' ? 'danger' : 'success'} position-fixed shadow-lg`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; animation: fadeIn 0.3s ease;';
+            toast.innerHTML = `<i class="bi ${type === 'danger' ? 'bi-exclamation-circle' : 'bi-check-circle'} me-2"></i>${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3500);
+        }
+
+        // ── Cargar al inicio ──
+        loadClients();
+    </script>
+</body>
+
+</html>

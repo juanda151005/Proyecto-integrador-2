@@ -1,9 +1,19 @@
+from decimal import Decimal
+
 from rest_framework import serializers
-from .models import TopUp, ClientChangeLog
+
+from .models import ClientChangeLog, TopUp
 
 
 class TopUpSerializer(serializers.ModelSerializer):
-    """Serializer para registro y lectura de recargas (RF11)."""
+    """
+    Serializer para registro y lectura de recargas (RF11).
+
+    Validaciones de negocio:
+    - El monto debe ser mayor a cero.
+    - La fecha no puede ser futura.
+    - El cliente debe estar ACTIVE (no INACTIVE ni MIGRATED).
+    """
 
     client_phone = serializers.CharField(source="client.phone_number", read_only=True)
 
@@ -19,6 +29,34 @@ class TopUpSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+    def validate_amount(self, value):
+        """El monto de la recarga debe ser mayor a cero."""
+        if value <= Decimal("0.00"):
+            raise serializers.ValidationError(
+                "El monto de la recarga debe ser mayor a cero."
+            )
+        return value
+
+    def validate_date(self, value):
+        """La fecha de la recarga no puede ser futura."""
+        from django.utils import timezone
+
+        if value > timezone.localdate():
+            raise serializers.ValidationError(
+                "La fecha de la recarga no puede ser una fecha futura."
+            )
+        return value
+
+    def validate_client(self, value):
+        """Solo se pueden registrar recargas para clientes activos."""
+        from apps.core_business.models import Client
+
+        if value.status != Client.StatusChoices.ACTIVE:
+            raise serializers.ValidationError(
+                f"No se pueden registrar recargas para un cliente con estado '{value.get_status_display()}'."
+            )
+        return value
 
 
 class EligibilityResultSerializer(serializers.Serializer):

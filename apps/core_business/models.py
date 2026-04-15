@@ -1,4 +1,11 @@
+from django.core.validators import RegexValidator
 from django.db import models
+
+# ── Validador reutilizable para número celular colombiano ──
+phone_regex = RegexValidator(
+    regex=r"^3\d{9}$",
+    message="El número debe tener 10 dígitos y empezar con 3. Ej: 3001234567",
+)
 
 
 class Client(models.Model):
@@ -21,7 +28,9 @@ class Client(models.Model):
     phone_number = models.CharField(
         max_length=20,
         unique=True,
+        validators=[phone_regex],
         verbose_name="Número de celular",
+        help_text="Número celular colombiano de 10 dígitos (ej: 3001234567)",
     )
     full_name = models.CharField(max_length=200, verbose_name="Nombre completo")
     document_number = models.CharField(

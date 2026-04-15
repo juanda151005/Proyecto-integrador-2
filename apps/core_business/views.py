@@ -1,17 +1,19 @@
 import csv
+
 from django.http import HttpResponse
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import Client
-from .serializers import (
-    ClientSerializer,
-    ClientCreateSerializer,
-    ClientExportSerializer,
-)
 from .filters import ClientFilter
+from .models import Client
+from .permissions import IsAnalistaOrAdmin
+from .serializers import (
+    ClientCreateSerializer,
+    ClientSerializer,
+    ClientUpdateSerializer,
+)
 
 
 class ClientListCreateView(generics.ListCreateAPIView):
@@ -22,6 +24,7 @@ class ClientListCreateView(generics.ListCreateAPIView):
 
     queryset = Client.objects.all()
     filterset_class = ClientFilter
+    permission_classes = [IsAnalistaOrAdmin]
     search_fields = ["full_name", "phone_number", "document_number"]
     ordering_fields = ["created_at", "average_spending", "activation_date"]
 
@@ -38,7 +41,12 @@ class ClientDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
 
     queryset = Client.objects.all()
-    serializer_class = ClientSerializer
+    permission_classes = [IsAnalistaOrAdmin]
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return ClientUpdateSerializer
+        return ClientSerializer
 
     def destroy(self, request, *args, **kwargs):
         client = self.get_object()
@@ -56,11 +64,17 @@ class ClientDetailView(generics.RetrieveUpdateDestroyAPIView):
 class ClientExportCSVView(APIView):
     """
     GET — Exporta la lista de clientes a CSV (RF10).
+    Respeta los mismos filtros de ClientFilter via query params.
     """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        # Aplicar filtros del negocio al queryset
+        queryset = Client.objects.all()
+        filterset = ClientFilter(request.query_params, queryset=queryset)
+        clients = filterset.qs
+
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = 'attachment; filename="clientes.csv"'
 
@@ -70,6 +84,7 @@ class ClientExportCSVView(APIView):
                 "Teléfono",
                 "Nombre",
                 "Documento",
+                "Email",
                 "Fecha Activación",
                 "Plan",
                 "Elegible",
@@ -78,13 +93,13 @@ class ClientExportCSVView(APIView):
             ]
         )
 
-        clients = Client.objects.all()
         for client in clients:
             writer.writerow(
                 [
                     client.phone_number,
                     client.full_name,
                     client.document_number,
+                    client.email,
                     client.activation_date,
                     client.get_current_plan_display(),
                     "Sí" if client.is_eligible else "No",

@@ -17,22 +17,28 @@
             <h4 class="mb-0 fw-bold">SmartMig</h4>
         </div>
 
-        <nav class="nav flex-column gap-1">
+                <nav class="nav flex-column gap-1">
             <a href="dashboard.html" class="nav-link-custom active">
                 <i class="bi bi-house-door"></i> Inicio
             </a>
             
-            <!-- RF19: Solo visible para ADMIN -->
-            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers">
+            <a href="recargas.html" class="nav-link-custom" id="navRecargas">
+                <i class="bi bi-cash-stack"></i> Registro de Recargas
+            </a>
+            
+            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers" data-rbac-roles="ADMIN">
                 <i class="bi bi-people"></i> Gestión de Usuarios
             </a>
-
-            <!-- RF19: Bitácora solo visible para ADMIN -->
-            <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora">
+            
+            <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora" data-rbac-roles="ADMIN">
                 <i class="bi bi-journal-text"></i> Bitácora de Login
             </a>
             
-            <a href="#" class="nav-link-custom">
+            <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN">
+                <i class="bi bi-sliders"></i> Configuración global
+            </a>
+            
+            <a href="clientes.html" class="nav-link-custom">
                 <i class="bi bi-person-lines-fill"></i> Clientes Prepago
             </a>
             
@@ -100,6 +106,9 @@
                         </a>
                         <a href="bitacora.html" class="btn btn-secondary-custom btn-sm">
                             <i class="bi bi-journal-text me-1"></i> Ver Bitácora
+                        </a>
+                        <a href="configuracion.html" class="btn btn-primary-custom btn-sm">
+                            <i class="bi bi-sliders me-1"></i> Configuración global
                         </a>
                     </div>
                 </div>

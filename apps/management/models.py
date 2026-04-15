@@ -1,4 +1,51 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+
+class GlobalSystemSettings(models.Model):
+    """
+    Configuración global del sistema (singleton).
+    """
+
+    id = models.PositiveIntegerField(primary_key=True, default=1, editable=False)
+    analysis_interval_minutes = models.PositiveIntegerField(
+        default=60,
+        validators=[MinValueValidator(5), MaxValueValidator(10080)],
+        verbose_name="Periodicidad de análisis (minutos)",
+        help_text="Intervalo para re-ejecutar el motor de elegibilidad.",
+    )
+    twilio_daily_message_limit = models.PositiveIntegerField(
+        default=500,
+        validators=[MinValueValidator(1), MaxValueValidator(1000000)],
+        verbose_name="Límite diario de mensajes Twilio",
+        help_text="Máximo de notificaciones SMS/WhatsApp enviadas por día.",
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Última actualización")
+
+    class Meta:
+        verbose_name = "Configuración global del sistema"
+        verbose_name_plural = "Configuración global del sistema"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+        from .runtime_settings import invalidate_runtime_settings_cache
+
+        invalidate_runtime_settings_cache()
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(
+            pk=1,
+            defaults={
+                "analysis_interval_minutes": 60,
+                "twilio_daily_message_limit": 500,
+            },
+        )
+        return obj
+
+    def __str__(self):
+        return "Configuración global"
 
 
 class BusinessRule(models.Model):
