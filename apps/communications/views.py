@@ -7,7 +7,6 @@ from .models import NotificationLog
 from .serializers import (
     NotificationLogSerializer,
     SendNotificationSerializer,
-    SendOfferSerializer,
     BulkNotificationSerializer,
 )
 from .services import TwilioService, ExternalAPIService
@@ -71,46 +70,6 @@ class SendNotificationView(APIView):
         )
 
 
-class SendOfferView(APIView):
-    """
-    POST — RF15: Envía la oferta personalizada de migración a un cliente.
-    Usa la plantilla predefinida de oferta (no requiere especificar mensaje).
-    Body: { "client_id": <int>, "channel": "WHATSAPP"|"SMS" }
-    """
-
-    permission_classes = [IsAdminOrAnalyst]
-
-    def post(self, request):
-        serializer = SendOfferSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        try:
-            client = Client.objects.get(pk=serializer.validated_data["client_id"])
-        except Client.DoesNotExist:
-            return Response(
-                {"detail": "Cliente no encontrado."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        channel = serializer.validated_data["channel"]
-        twilio = TwilioService()
-        result = twilio.send_offer(client, channel=channel)
-
-        if not result["success"]:
-            return Response(
-                {"detail": f"Error al enviar oferta: {result.get('error')}"},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        log = NotificationLog.objects.get(pk=result["log_id"])
-        return Response(
-            {
-                "detail": "Oferta enviada exitosamente.",
-                "notification": NotificationLogSerializer(log).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
-
 class BulkNotifyEligibleView(APIView):
     """
     POST — Envío masivo de ofertas a todos los clientes elegibles (RF15).
@@ -123,19 +82,10 @@ class BulkNotifyEligibleView(APIView):
         serializer = BulkNotificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        use_test = serializer.validated_data.get("use_test_eligible", False)
-        channel = serializer.validated_data["channel"]
-
-        if use_test:
-            eligible_clients = Client.objects.filter(
-                is_test_eligible=True,
-                status=Client.StatusChoices.ACTIVE,
-            )
-        else:
-            eligible_clients = Client.objects.filter(
-                is_eligible=True,
-                status=Client.StatusChoices.ACTIVE,
-            )
+        eligible_clients = Client.objects.filter(
+            is_eligible=True,
+            status=Client.StatusChoices.ACTIVE,
+        )
 
         if not eligible_clients.exists():
             return Response(
@@ -143,11 +93,25 @@ class BulkNotifyEligibleView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        channel = serializer.validated_data["channel"]
+        message = serializer.validated_data["message"]
         results = {"sent": 0, "failed": 0}
 
         twilio = TwilioService()
         for client in eligible_clients:
-            result = twilio.send_offer(client, channel=channel)
+            if channel == "WHATSAPP":
+                result = twilio.send_whatsapp(client.phone_number, message)
+            else:
+                result = twilio.send_sms(client.phone_number, message)
+
+            NotificationLog.objects.create(
+                client=client,
+                message=message,
+                channel=channel,
+                status="SENT" if result["success"] else "FAILED",
+                external_id=result.get("sid", ""),
+            )
+
             if result["success"]:
                 results["sent"] += 1
             else:
@@ -159,7 +123,6 @@ class BulkNotifyEligibleView(APIView):
                 **results,
             }
         )
-
 
 
 class ExternalAPIQueryView(APIView):
