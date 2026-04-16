@@ -20,7 +20,9 @@ class GlobalSystemSettings(models.Model):
         verbose_name="Límite diario de mensajes Twilio",
         help_text="Máximo de notificaciones SMS/WhatsApp enviadas por día.",
     )
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Última actualización")
+    updated_at = models.DateTimeField(
+        auto_now=True, verbose_name="Última actualización"
+    )
 
     class Meta:
         verbose_name = "Configuración global del sistema"

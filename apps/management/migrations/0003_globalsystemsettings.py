@@ -46,7 +46,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "updated_at",
-                    models.DateTimeField(auto_now=True, verbose_name="Última actualización"),
+                    models.DateTimeField(
+                        auto_now=True, verbose_name="Última actualización"
+                    ),
                 ),
             ],
             options={

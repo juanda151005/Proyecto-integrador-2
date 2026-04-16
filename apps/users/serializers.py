@@ -153,11 +153,70 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
-    """Serializer para actualización de perfil (RF04)."""
+    """
+    Serializer para actualización de perfil (RF04).
+
+    Criterios de aceptación:
+    - CP 1.1: Permite actualizar nombre, teléfono y foto de forma parcial.
+    - CP 1.2: Valida formato de teléfono (solo dígitos, mínimo 10 dígitos).
+    - CP 2.1: Retorna los datos actualizados para reflejar cambios en la UI.
+    """
+
+    # use_url=True garantiza que la URL de la foto sea absoluta en la respuesta
+    # allow_null=True + required=False permite PATCH sin enviar foto
+    photo = serializers.ImageField(
+        required=False,
+        allow_null=True,
+        use_url=True,
+    )
 
     class Meta:
         model = CustomUser
-        fields = ["first_name", "last_name", "email", "phone_number", "photo"]
+        fields = ["first_name", "last_name", "phone_number", "photo"]
+
+    def validate_first_name(self, value):
+        """Valida que el nombre no esté vacío y solo tenga caracteres válidos."""
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("El nombre no puede estar vacío.")
+        if len(value) > 150:
+            raise serializers.ValidationError(
+                "El nombre no puede superar 150 caracteres."
+            )
+        return value
+
+    def validate_last_name(self, value):
+        """Valida que el apellido no supere el límite."""
+        value = value.strip()
+        if len(value) > 150:
+            raise serializers.ValidationError(
+                "El apellido no puede superar 150 caracteres."
+            )
+        return value
+
+    def validate_phone_number(self, value):
+        """
+        CP 1.2 — Valida formato de teléfono:
+        - Solo se permiten dígitos (con '+' opcional al inicio).
+        - Mínimo 10 dígitos, máximo 15.
+        """
+        import re
+
+        if value:
+            digits_only = re.sub(r"[\s\-\(\)\+]", "", value)
+            if not digits_only.isdigit():
+                raise serializers.ValidationError(
+                    "El teléfono solo puede contener dígitos. No se permiten letras ni caracteres especiales."
+                )
+            if len(digits_only) < 10:
+                raise serializers.ValidationError(
+                    "El número de teléfono debe tener al menos 10 dígitos."
+                )
+            if len(digits_only) > 15:
+                raise serializers.ValidationError(
+                    "El número de teléfono no puede superar 15 dígitos."
+                )
+        return value
 
 
 class ChangePasswordSerializer(serializers.Serializer):

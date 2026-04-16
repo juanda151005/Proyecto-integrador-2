@@ -37,6 +37,16 @@ const SecurityService = {
         window.location.href = 'login.html';
     },
 
+    /**
+     * RF04 — Actualiza solo los campos modificados del usuario en localStorage.
+     * CP 2.1: Reflejo inmediato en UI sin recargar la página.
+     */
+    updateSessionUser: (updatedFields) => {
+        const current = SecurityService.getUser() || {};
+        const merged = { ...current, ...updatedFields };
+        localStorage.setItem('user', JSON.stringify(merged));
+    },
+
     isAuthenticated: () => !!localStorage.getItem('access_token'),
 
     // RF19: Verifica si el usuario tiene el rol requerido
@@ -192,3 +202,89 @@ async function fetchAPI(endpoint, options = {}) {
         throw error;
     }
 }
+
+// ==========================================================================
+// RF04 — API de Perfil de Usuario
+// PATCH /api/v1/users/profile/
+// ==========================================================================
+const ProfileAPI = {
+    /**
+     * Obtiene los datos actuales del perfil del usuario autenticado.
+     */
+    getProfile: () => fetchAPI('/users/profile/', { method: 'GET' }),
+
+    /**
+     * Convierte una URL de foto relativa en absoluta usando el servidor Django.
+     * DRF puede devolver la URL completa o solo la ruta relativa dependiendo del contexto.
+     */
+    _resolvePhotoUrl: (photoValue) => {
+        if (!photoValue) return null;
+        if (photoValue.startsWith('http')) return photoValue;
+        // Ruta relativa → construir URL absoluta apuntando a Django (port 8000)
+        const djangoBase = API_BASE_URL.replace('/api/v1', '');
+        return `${djangoBase}${photoValue.startsWith('/') ? '' : '/'}${photoValue}`;
+    },
+
+    /**
+     * CP 1.1 — Actualiza el perfil con los datos del formulario.
+     * Usa FormData para soportar upload de foto (multipart/form-data).
+     * CP 2.1 — Actualiza localStorage inmediatamente tras éxito.
+     *
+     * @param {FormData} formData - Datos del formulario (first_name, last_name, phone_number, photo)
+     * @returns {Promise<Object>} Datos actualizados del usuario
+     */
+    updateProfile: async (formData) => {
+        const token = SecurityService.getToken();
+
+        let response;
+        try {
+            response = await fetch(`${API_BASE_URL}/users/profile/`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    // NO incluir Content-Type: el browser lo setea automáticamente con el boundary
+                },
+                body: formData,
+            });
+        } catch (networkErr) {
+            // TypeError: Failed to fetch — servidor caído o sin CORS
+            console.error('[ProfileAPI] Error de red al hacer PATCH /users/profile/:', networkErr);
+            throw { status: 0, data: null, networkError: true, message: networkErr.message };
+        }
+
+        if (response.status === 401) {
+            SecurityService.logout();
+            return null;
+        }
+
+        let data;
+        try {
+            data = await response.json();
+        } catch (parseErr) {
+            console.error('[ProfileAPI] No se pudo parsear la respuesta JSON:', parseErr, '| Status:', response.status);
+            // El servidor respondió pero con HTML o texto plano (ej. 500 sin traceback JSON)
+            throw { status: response.status, data: { detail: `Error del servidor (${response.status}). Revisa la consola del servidor Django.` } };
+        }
+
+        if (!response.ok) {
+            console.error('[ProfileAPI] Respuesta de error del servidor:', response.status, data);
+            throw { status: response.status, data };
+        }
+
+        // Normalizar la URL de la foto (puede venir relativa o absoluta)
+        if (data.photo) {
+            data.photo = ProfileAPI._resolvePhotoUrl(data.photo);
+        }
+
+        // CP 2.1 — Reflejar cambios en localStorage inmediatamente
+        SecurityService.updateSessionUser({
+            first_name: data.first_name,
+            last_name: data.last_name,
+            phone_number: data.phone_number,
+            photo: data.photo || null,
+        });
+
+        return data;
+    },
+};
+

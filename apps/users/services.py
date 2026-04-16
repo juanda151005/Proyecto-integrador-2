@@ -63,7 +63,7 @@ def generate_password_reset_link(user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = _token_generator.make_token(user)
     frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
-    return f"{frontend_url}/reset-password/{uid}/{token}/"
+    return f"{frontend_url}/reset-password.html?uid={uid}&token={token}"
 
 
 def validate_password_reset_token(uidb64, token):
