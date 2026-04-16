@@ -1,9 +1,14 @@
 // ==========================================================================
 // Configuración Global de la API
 // ==========================================================================
-// Usar 127.0.0.1 (no "localhost") para coincidir con runserver por defecto y evitar
-// fallos cuando el SO resuelve localhost solo a IPv6 (::1) y no hay listener en ::1.
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+// Backend en el puerto 8000; frontend en otro puerto (p. ej. 8001).
+// Usar el mismo hostname de la página evita errores de CORS por mezclar
+// localhost y 127.0.0.1.
+const API_BASE_URL = (() => {
+    if (typeof window === 'undefined') return 'http://127.0.0.1:8000/api/v1';
+    const host = window.location.hostname || '127.0.0.1';
+    return `http://${host}:8000/api/v1`;
+})();
 
 // ==========================================================================
 // RF19 — Mapa de permisos por página (Frontend Guard)
