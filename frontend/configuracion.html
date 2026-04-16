@@ -9,26 +9,41 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
     <div class="sidebar">
         <div class="d-flex align-items-center gap-2 mb-5 px-2">
             <i class="bi bi-rocket-takeoff text-primary fs-3"></i>
             <h4 class="mb-0 fw-bold">SmartMig</h4>
         </div>
 
-        <nav class="nav flex-column gap-1">
+                <nav class="nav flex-column gap-1">
             <a href="dashboard.html" class="nav-link-custom">
                 <i class="bi bi-house-door"></i> Inicio
             </a>
-            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers">
+            
+            <a href="recargas.html" class="nav-link-custom" id="navRecargas">
+                <i class="bi bi-cash-stack"></i> Registro de Recargas
+            </a>
+            
+            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers" data-rbac-roles="ADMIN">
                 <i class="bi bi-people"></i> Gestión de Usuarios
             </a>
-            <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora">
+            
+            <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora" data-rbac-roles="ADMIN">
                 <i class="bi bi-journal-text"></i> Bitácora de Login
             </a>
-            <a href="configuracion.html" class="nav-link-custom active d-none" id="navConfig">
+
+            <a href="auditoria.html" class="nav-link-custom d-none" id="navAuditoria" data-rbac-roles="ADMIN">
+                <i class="bi bi-shield-lock"></i> Auditoría crítica
+            </a>
+            
+            <a href="configuracion.html" class="nav-link-custom active d-none" id="navConfig" data-rbac-roles="ADMIN">
                 <i class="bi bi-sliders"></i> Configuración global
             </a>
+            
+            <a href="clientes.html" class="nav-link-custom">
+                <i class="bi bi-person-lines-fill"></i> Clientes Prepago
+            </a>
+            
             <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
                 <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
             </a>
@@ -38,7 +53,9 @@
     <div class="main-content fade-in">
         <header class="mb-4">
             <h2 class="fw-bold">Configuración global del sistema</h2>
-            <p class="text-secondary mb-0">Ajusta la periodicidad del motor de análisis y los límites de Twilio. Los cambios se aplican de inmediato, sin reiniciar el servidor.</p>
+            <p class="text-secondary mb-0">
+                Ajusta variables globales sin reiniciar el servidor.
+            </p>
         </header>
 
         <div id="alertConfig" class="alert d-none py-2 px-3" role="alert"></div>
@@ -47,14 +64,16 @@
             <form id="formConfig">
                 <div class="row g-4">
                     <div class="col-md-6">
-                        <label class="form-label text-secondary small" for="analysisInterval">Periodicidad de análisis (minutos)</label>
+                        <label class="form-label text-secondary small" for="analysisInterval">
+                            Periodicidad de análisis (minutos)
+                        </label>
                         <input type="number" min="5" max="10080" class="form-control form-control-custom" id="analysisInterval" required>
-                        <p class="text-secondary small mt-1 mb-0">Intervalo recomendado para re-ejecutar el motor de elegibilidad (entre 5 minutos y 7 días).</p>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label text-secondary small" for="twilioLimit">Límite diario de mensajes Twilio</label>
+                        <label class="form-label text-secondary small" for="twilioLimit">
+                            Límite diario de mensajes Twilio
+                        </label>
                         <input type="number" min="1" max="1000000" class="form-control form-control-custom" id="twilioLimit" required>
-                        <p class="text-secondary small mt-1 mb-0">Máximo de SMS/WhatsApp enviados por día (según registros en el sistema).</p>
                     </div>
                 </div>
                 <div class="mt-4 d-flex align-items-center gap-3 flex-wrap">
@@ -69,9 +88,7 @@
 
     <script src="js/api.js"></script>
     <script>
-        if (!SecurityService.initPage()) {
-            // initPage redirige
-        } else {
+        if (SecurityService.initPage()) {
             loadSettings();
         }
 
@@ -86,10 +103,10 @@
                     document.getElementById('updatedAt').textContent =
                         'Última actualización: ' + d.toLocaleString('es-CO');
                 }
-            } catch (e) {
+            } catch (error) {
                 alertEl.classList.remove('d-none', 'alert-success');
                 alertEl.classList.add('alert-danger');
-                alertEl.textContent = 'No se pudo cargar la configuración. ¿Está el servidor en marcha?';
+                alertEl.textContent = 'No se pudo cargar la configuración.';
             }
         }
 
@@ -97,10 +114,10 @@
             e.preventDefault();
             const alertEl = document.getElementById('alertConfig');
             const btn = document.getElementById('btnSave');
-            alertEl.classList.add('d-none');
+            const originalText = btn.innerHTML;
             btn.disabled = true;
-            const original = btn.innerHTML;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+            alertEl.classList.add('d-none');
 
             try {
                 const payload = {
@@ -111,6 +128,7 @@
                     method: 'PATCH',
                     body: JSON.stringify(payload),
                 });
+
                 document.getElementById('analysisInterval').value = data.analysis_interval_minutes;
                 document.getElementById('twilioLimit').value = data.twilio_daily_message_limit;
                 if (data.updated_at) {
@@ -118,23 +136,17 @@
                     document.getElementById('updatedAt').textContent =
                         'Última actualización: ' + d.toLocaleString('es-CO');
                 }
+
                 alertEl.classList.remove('d-none', 'alert-danger');
                 alertEl.classList.add('alert-success');
-                alertEl.textContent = 'Cambios guardados. Ya aplican en el motor de análisis y en Twilio.';
-            } catch (err) {
+                alertEl.textContent = 'Cambios guardados correctamente.';
+            } catch (error) {
                 alertEl.classList.remove('d-none', 'alert-success');
                 alertEl.classList.add('alert-danger');
-                let msg = 'No se pudo guardar.';
-                if (err.data && err.data) {
-                    if (typeof err.data === 'object') {
-                        const first = Object.values(err.data)[0];
-                        msg = Array.isArray(first) ? first[0] : (first || msg);
-                    }
-                }
-                alertEl.textContent = 'No se pudo guardar: ' + msg;
+                alertEl.textContent = 'No se pudo guardar la configuración.';
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = original;
+                btn.innerHTML = originalText;
             }
         });
     </script>

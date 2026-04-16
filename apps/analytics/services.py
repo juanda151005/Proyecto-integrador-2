@@ -20,7 +20,9 @@ class EligibilityEngine:
 
     @staticmethod
     def get_analysis_interval_minutes():
-        """Periodicidad de re-análisis configurada en GlobalSystemSettings (caliente)."""
+        """
+        Periodicidad de re-evaluación del motor leída desde configuración global.
+        """
         from apps.management.runtime_settings import get_runtime_settings
 
         return get_runtime_settings()["analysis_interval_minutes"]

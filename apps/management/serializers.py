@@ -4,8 +4,6 @@ from .models import AuditLog, BusinessRule, GlobalSystemSettings
 
 
 class GlobalSystemSettingsSerializer(serializers.ModelSerializer):
-    """Configuración global (singleton) — solo ADMIN."""
-
     class Meta:
         model = GlobalSystemSettings
         fields = [
@@ -35,7 +33,7 @@ class BusinessRuleSerializer(serializers.ModelSerializer):
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
-    """Serializer para bitácora de auditoría (RF14)."""
+    """Serializer para bitácora de auditoría (RF14). Solo lectura (inmutable)."""
 
     user_username = serializers.CharField(source="user.username", read_only=True)
 
@@ -52,7 +50,17 @@ class AuditLogSerializer(serializers.ModelSerializer):
             "ip_address",
             "timestamp",
         ]
-        read_only_fields = ["id", "timestamp"]
+        read_only_fields = [
+            "id",
+            "user",
+            "user_username",
+            "action",
+            "model_name",
+            "object_id",
+            "changes",
+            "ip_address",
+            "timestamp",
+        ]
 
 
 class ConversionReportSerializer(serializers.Serializer):

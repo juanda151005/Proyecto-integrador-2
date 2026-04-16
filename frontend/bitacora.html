@@ -17,22 +17,33 @@
             <h4 class="mb-0 fw-bold">SmartMig</h4>
         </div>
 
-        <nav class="nav flex-column gap-1">
+                <nav class="nav flex-column gap-1">
             <a href="dashboard.html" class="nav-link-custom">
                 <i class="bi bi-house-door"></i> Inicio
             </a>
             
-            <a href="usuarios.html" class="nav-link-custom" id="navUsers">
+            <a href="recargas.html" class="nav-link-custom" id="navRecargas">
+                <i class="bi bi-cash-stack"></i> Registro de Recargas
+            </a>
+            
+            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers" data-rbac-roles="ADMIN">
                 <i class="bi bi-people"></i> Gestión de Usuarios
             </a>
-
-            <!-- Este menú siempre está visible aquí porque esta página es exclusiva de Admin -->
-            <a href="bitacora.html" class="nav-link-custom active" id="navBitacora">
+            
+            <a href="bitacora.html" class="nav-link-custom active d-none" id="navBitacora" data-rbac-roles="ADMIN">
                 <i class="bi bi-journal-text"></i> Bitácora de Login
             </a>
 
-            <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig">
+            <a href="auditoria.html" class="nav-link-custom d-none" id="navAuditoria" data-rbac-roles="ADMIN">
+                <i class="bi bi-shield-lock"></i> Auditoría crítica
+            </a>
+            
+            <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN">
                 <i class="bi bi-sliders"></i> Configuración global
+            </a>
+            
+            <a href="clientes.html" class="nav-link-custom">
+                <i class="bi bi-person-lines-fill"></i> Clientes Prepago
             </a>
             
             <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
@@ -75,6 +86,9 @@
 
     <script src="js/api.js"></script>
     <script>
+        // ── Protección de ruta e inicialización RBAC ──
+        SecurityService.initPage();
+
         // RF19: Guard — Solo ADMIN puede ver la bitácora (protegido por initPage)
         if (!SecurityService.initPage()) {
             // El script redirigirá automáticamente si no hay permisos

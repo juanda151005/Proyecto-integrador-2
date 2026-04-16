@@ -85,10 +85,17 @@
                 window.location.href = 'dashboard.html';
 
             } catch (error) {
-                // Manejo de error de credenciales completando RF02
                 errorAlert.classList.remove('d-none');
-                if(error.data && error.data.detail) {
-                    errorAlert.innerText = error.data.detail;
+                if (error && error.status === 401) {
+                    errorAlert.innerText = (error.data && error.data.detail)
+                        ? error.data.detail
+                        : 'Revisa tus credenciales e intenta de nuevo.';
+                } else if (error && error.status === 403) {
+                    errorAlert.innerText = (error.data && error.data.detail) || 'Acceso denegado.';
+                } else if (error && typeof error.status === 'number') {
+                    errorAlert.innerText = `Error del servidor (${error.status}). Revisa la consola o intenta más tarde.`;
+                } else {
+                    errorAlert.innerText = 'No se pudo conectar con la API. ¿Está el backend en ejecución en http://127.0.0.1:8000 y la URL en js/api.js coincide?';
                 }
             } finally {
                 btnSubmit.innerHTML = originalText;

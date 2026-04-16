@@ -1,7 +1,9 @@
 // ==========================================================================
 // Configuración Global de la API
 // ==========================================================================
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+// Usar 127.0.0.1 (no "localhost") para coincidir con runserver por defecto y evitar
+// fallos cuando el SO resuelve localhost solo a IPv6 (::1) y no hay listener en ::1.
+const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
 // ==========================================================================
 // RF19 — Mapa de permisos por página (Frontend Guard)
@@ -9,6 +11,7 @@ const API_BASE_URL = 'http://localhost:8000/api/v1';
 const ROUTE_PERMISSIONS = {
     'usuarios.html': ['ADMIN'],
     'bitacora.html': ['ADMIN'],
+    'auditoria.html': ['ADMIN'],
     'configuracion.html': ['ADMIN'],
 };
 
@@ -127,6 +130,13 @@ const SecurityService = {
             }
         }
 
+        const navAuditoria = document.getElementById('navAuditoria');
+        if (navAuditoria) {
+            if (SecurityService.hasRole(['ADMIN'])) {
+                navAuditoria.classList.remove('d-none');
+            }
+        }
+
         const navConfig = document.getElementById('navConfig');
         if (navConfig) {
             if (SecurityService.hasRole(['ADMIN'])) {
@@ -151,13 +161,16 @@ const SecurityService = {
 // ==========================================================================
 async function fetchAPI(endpoint, options = {}) {
     const token = SecurityService.getToken();
+    const isAuthEndpoint =
+        endpoint.includes('/auth/token/') && !endpoint.includes('/auth/token/refresh/');
 
     const headers = {
         'Content-Type': 'application/json',
         ...options.headers,
     };
 
-    if (token) {
+    // Login: no enviar Bearer; un token viejo no debe interferir con obtener uno nuevo.
+    if (token && !isAuthEndpoint) {
         headers['Authorization'] = `Bearer ${token}`;
     }
 

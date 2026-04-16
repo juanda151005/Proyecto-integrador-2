@@ -1,11 +1,23 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
+class ImmutableAuditLogQuerySet(models.QuerySet):
+    def delete(self):
+        raise ValidationError(
+            "Los registros de auditoría son inmutables y no pueden eliminarse."
+        )
+
+
+class AuditLogManager(models.Manager):
+    def get_queryset(self):
+        return ImmutableAuditLogQuerySet(self.model, using=self._db)
+
+
 class GlobalSystemSettings(models.Model):
     """
-    Configuración global del sistema (singleton, pk=1).
-    Periodicidad del análisis y límites Twilio — aplicación en caliente vía caché.
+    Configuración global del sistema (singleton).
     """
 
     id = models.PositiveIntegerField(primary_key=True, default=1, editable=False)
@@ -13,13 +25,13 @@ class GlobalSystemSettings(models.Model):
         default=60,
         validators=[MinValueValidator(5), MaxValueValidator(10080)],
         verbose_name="Periodicidad de análisis (minutos)",
-        help_text="Intervalo recomendado para re-ejecutar el motor de elegibilidad (5 min – 7 días).",
+        help_text="Intervalo para re-ejecutar el motor de elegibilidad.",
     )
     twilio_daily_message_limit = models.PositiveIntegerField(
         default=500,
-        validators=[MinValueValidator(1), MaxValueValidator(1_000_000)],
+        validators=[MinValueValidator(1), MaxValueValidator(1000000)],
         verbose_name="Límite diario de mensajes Twilio",
-        help_text="Máximo de notificaciones SMS/WhatsApp registradas por día.",
+        help_text="Máximo de notificaciones SMS/WhatsApp enviadas por día.",
     )
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Última actualización")
 
@@ -91,6 +103,8 @@ class AuditLog(models.Model):
     Registra acciones importantes del sistema.
     """
 
+    objects = AuditLogManager()
+
     class ActionChoices(models.TextChoices):
         CREATE = "CREATE", "Creación"
         UPDATE = "UPDATE", "Actualización"
@@ -138,6 +152,18 @@ class AuditLog(models.Model):
         verbose_name = "Registro de auditoría"
         verbose_name_plural = "Registros de auditoría"
         ordering = ["-timestamp"]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and AuditLog.objects.filter(pk=self.pk).exists():
+            raise ValidationError(
+                "Los registros de auditoría son inmutables y no pueden modificarse."
+            )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(
+            "Los registros de auditoría son inmutables y no pueden eliminarse."
+        )
 
     def __str__(self):
         return f"[{self.get_action_display()}] {self.model_name} #{self.object_id} — {self.timestamp:%Y-%m-%d %H:%M}"
