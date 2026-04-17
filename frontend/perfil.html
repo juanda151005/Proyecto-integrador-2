@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil - Smart Migration System</title>
+    <meta name="description" content="Edita tus datos personales: nombre, teléfono y foto de perfil.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* ================================================
+           Perfil — Estilos específicos de la página
+           ================================================ */
+
+        /* Contenedor avatar */
+        .avatar-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1.5rem;
+            cursor: pointer;
+        }
+
+        .avatar-img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--primary-color);
+            box-shadow: 0 0 0 6px rgba(50, 81, 144, 0.12);
+            transition: filter 0.2s ease;
+        }
+
+        .avatar-wrapper:hover .avatar-img {
+            filter: brightness(0.75);
+        }
+
+        .avatar-overlay {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            gap: 2px;
+            pointer-events: none;
+        }
+
+        .avatar-wrapper:hover .avatar-overlay {
+            opacity: 1;
+        }
+
+        /* Input file oculto */
+        #photoInput { display: none; }
+
+        /* Tarjeta de perfil principal */
+        .profile-card {
+            max-width: 660px;
+            margin: 0 auto;
+        }
+
+        /* Badge de rol */
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.3rem 0.85rem;
+            border-radius: 50px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: rgba(50, 81, 144, 0.1);
+            color: var(--primary-color);
+            letter-spacing: 0.03em;
+        }
+
+        /* Toast de notificación */
+        .toast-container-custom {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1.25rem;
+            border-radius: 0.65rem;
+            font-size: 0.88rem;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            animation: toastIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            min-width: 280px;
+            max-width: 380px;
+        }
+
+        .toast-success {
+            background: #ecfdf5;
+            border: 1px solid #6ee7b7;
+            color: #065f46;
+        }
+
+        .toast-error {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(40px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateX(0); }
+            to   { opacity: 0; transform: translateX(40px); }
+        }
+
+        /* Spinner dentro del botón */
+        .btn-loading .spinner-border {
+            width: 1rem;
+            height: 1rem;
+            border-width: 2px;
+        }
+
+        /* Divisor de sección */
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--surface-border);
+            margin: 1.5rem 0;
+        }
+
+        /* Indicador de cambio de foto */
+        .photo-hint {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: -0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Label campo */
+        .field-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 0.35rem;
+        }
+
+        /* Sección de lectura (email/username) */
+        .readonly-field {
+            background: rgba(50, 81, 144, 0.04);
+            border: 1px solid var(--surface-border);
+            border-radius: 0.5rem;
+            padding: 0.65rem 1rem;
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Indicador de campo requerido */
+        .required-star {
+            color: var(--danger-color);
+            font-size: 0.7rem;
+            vertical-align: super;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===================== SIDEBAR ===================== -->
+<div class="sidebar">
+    <div class="d-flex align-items-center gap-2 mb-5 px-2">
+        <i class="bi bi-rocket-takeoff text-primary fs-3"></i>
+        <h4 class="mb-0 fw-bold">SmartMig</h4>
+    </div>
+
+    <nav class="nav flex-column gap-1">
+        <a href="dashboard.html" class="nav-link-custom">
+            <i class="bi bi-house-door"></i> Inicio
+        </a>
+        <a href="recargas.html" class="nav-link-custom" id="navRecargas">
+            <i class="bi bi-cash-stack"></i> Registro de Recargas
+        </a>
+        <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers" data-rbac-roles="ADMIN">
+            <i class="bi bi-people"></i> Gestión de Usuarios
+        </a>
+        <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora" data-rbac-roles="ADMIN">
+            <i class="bi bi-journal-text"></i> Bitácora de Login
+        </a>
+        <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN">
+            <i class="bi bi-sliders"></i> Configuración global
+        </a>
+        <a href="clientes.html" class="nav-link-custom">
+            <i class="bi bi-person-lines-fill"></i> Clientes Prepago
+        </a>
+
+        <hr class="section-divider">
+
+        <!-- Perfil activo -->
+        <a href="perfil.html" class="nav-link-custom active">
+            <i class="bi bi-person-circle"></i> Mi Perfil
+        </a>
+        <a href="#" class="nav-link-custom text-danger mt-2" onclick="SecurityService.logout()">
+            <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
+        </a>
+    </nav>
+</div>
+
+<!-- ===================== MAIN CONTENT ===================== -->
+<div class="main-content fade-in">
+
+    <!-- Header -->
+    <header class="d-flex justify-content-between align-items-center mb-5 glass-panel p-3">
+        <div>
+            <h4 class="mb-0">Mi Perfil</h4>
+            <p class="text-secondary mb-0 small">Actualiza tu información personal</p>
+        </div>
+        <div class="bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-medium text-sm">
+            <i class="bi bi-shield-check me-1"></i> Sesión Segura JWT
+        </div>
+    </header>
+
+    <!-- Tarjeta de perfil -->
+    <div class="profile-card">
+        <div class="glass-panel p-4 p-md-5">
+
+            <!-- Avatar -->
+            <div class="text-center mb-1">
+                <div class="avatar-wrapper" id="avatarWrapper" title="Haz clic para cambiar tu foto">
+                    <img
+                        id="avatarPreview"
+                        src="https://ui-avatars.com/api/?name=U&background=325190&color=fff&size=120"
+                        alt="Foto de perfil"
+                        class="avatar-img"
+                        onerror="this.src='https://ui-avatars.com/api/?name=U&background=325190&color=fff&size=120'"
+                    >
+                    <div class="avatar-overlay">
+                        <i class="bi bi-camera fs-5"></i>
+                        <span>Cambiar</span>
+                    </div>
+                </div>
+                <input type="file" id="photoInput" accept="image/*">
+            </div>
+            <p class="photo-hint" id="photoHint">Haz clic en la foto para cambiarla (JPG, PNG · máx. 5 MB)</p>
+
+            <!-- Nombre y apellido (solo lectura) -->
+            <div class="text-center mb-3">
+                <h5 class="mb-1 fw-bold" id="displayFullName">—</h5>
+                <span class="role-badge" id="displayRole">
+                    <i class="bi bi-person-badge"></i>
+                    <span id="displayRoleText">—</span>
+                </span>
+            </div>
+
+            <hr class="section-divider">
+
+            <!-- Formulario de edición -->
+            <form id="profileForm" novalidate>
+
+                <!-- Nombre -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label for="inputFirstName" class="field-label">
+                            Nombre <span class="required-star">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="inputFirstName"
+                            name="first_name"
+                            class="form-control form-control-custom"
+                            placeholder="Tu nombre"
+                            maxlength="150"
+                            required
+                        >
+                        <div class="invalid-feedback" id="errorFirstName"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputLastName" class="field-label">Apellido</label>
+                        <input
+                            type="text"
+                            id="inputLastName"
+                            name="last_name"
+                            class="form-control form-control-custom"
+                            placeholder="Tu apellido"
+                            maxlength="150"
+                        >
+                        <div class="invalid-feedback" id="errorLastName"></div>
+                    </div>
+                </div>
+
+                <!-- Teléfono -->
+                <div class="mb-3">
+                    <label for="inputPhone" class="field-label">
+                        Teléfono
+                        <span class="ms-1 text-secondary fw-normal" style="font-size:0.74rem; text-transform: none;">(mínimo 10 dígitos)</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text" style="border-color: var(--surface-border); background: rgba(255,255,255,0.7);">
+                            <i class="bi bi-telephone" style="color: var(--primary-color);"></i>
+                        </span>
+                        <input
+                            type="tel"
+                            id="inputPhone"
+                            name="phone_number"
+                            class="form-control form-control-custom"
+                            placeholder="3001234567"
+                            maxlength="20"
+                        >
+                    </div>
+                    <div class="mt-1 text-danger small d-none" id="errorPhone"></div>
+                </div>
+
+                <!-- Campos de solo lectura -->
+                <hr class="section-divider">
+                <p class="field-label mb-2" style="color: var(--text-secondary);">Datos de cuenta (no editables)</p>
+                <div class="mb-2">
+                    <label class="field-label">Usuario</label>
+                    <div class="readonly-field">
+                        <i class="bi bi-at"></i>
+                        <span id="displayUsername">—</span>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="field-label">Correo electrónico</label>
+                    <div class="readonly-field">
+                        <i class="bi bi-envelope"></i>
+                        <span id="displayEmail">—</span>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="d-flex gap-3 justify-content-end">
+                    <button
+                        type="button"
+                        id="btnDiscard"
+                        class="btn btn-secondary-custom"
+                        style="padding: 0.6rem 1.2rem; background: transparent; color: var(--text-secondary); border: 1px solid var(--surface-border); box-shadow: none;"
+                        onclick="loadCurrentProfile()"
+                    >
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Descartar
+                    </button>
+                    <button type="submit" id="btnSave" class="btn btn-primary-custom">
+                        <i class="bi bi-check-lg me-1"></i> Guardar cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Enlace para cambiar contraseña -->
+        <div class="glass-panel p-3 mt-3 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <div class="bg-warning bg-opacity-10 text-warning p-2 rounded-3">
+                    <i class="bi bi-key fs-5"></i>
+                </div>
+                <div>
+                    <p class="mb-0 fw-semibold" style="font-size: 0.9rem;">Contraseña</p>
+                    <p class="mb-0 text-secondary" style="font-size: 0.78rem;">Cambia tu contraseña de acceso</p>
+                </div>
+            </div>
+            <a href="forgot-password.html" class="btn btn-sm" style="background: var(--secondary-color); color: white; border-radius: 0.5rem; font-size: 0.82rem; padding: 0.4rem 0.85rem;">
+                <i class="bi bi-arrow-right me-1"></i> Cambiar
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== TOASTS ===================== -->
+<div class="toast-container-custom" id="toastContainer" aria-live="polite"></div>
+
+<!-- ===================== SCRIPTS ===================== -->
+<script src="js/api.js"></script>
+<script>
+// ==========================================================================
+// RF04 — Lógica de edición de perfil
+// ==========================================================================
+
+// Guard: requiere autenticación
+SecurityService.initPage();
+
+// Estado local del perfil
+let originalProfile = {};
+
+// ──────────────────────────────────────────
+// Helpers de UI
+// ──────────────────────────────────────────
+
+/**
+ * Muestra un toast de notificación en la esquina inferior derecha.
+ * @param {string} message - Texto del toast
+ * @param {'success'|'error'} type - Tipo de toast
+ */
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const icon = type === 'success'
+        ? '<i class="bi bi-check-circle-fill"></i>'
+        : '<i class="bi bi-exclamation-circle-fill"></i>';
+    const toast = document.createElement('div');
+    toast.className = `toast-item toast-${type}`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `${icon} <span>${message}</span>`;
+    container.appendChild(toast);
+    // Auto-dismiss después de 4s
+    setTimeout(() => {
+        toast.style.animation = 'toastOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+/**
+ * CP 2.1 — Actualiza en tiempo real todos los elementos del DOM
+ * con los datos del perfil (sin recargar la página).
+ */
+function updateUIWithProfile(data) {
+    const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.username || '—';
+
+    // Encabezado del sidebar y cabecera de la página
+    const nameEl = document.getElementById('userName');
+    if (nameEl) nameEl.innerText = data.first_name || data.username;
+
+    // Nombre completo en la tarjeta
+    document.getElementById('displayFullName').textContent = fullName;
+
+    // Rol
+    if (data.role_display) {
+        document.getElementById('displayRoleText').textContent = data.role_display;
+    }
+
+    // Email y username (lectura)
+    const emailEl = document.getElementById('displayEmail');
+    const usernameEl = document.getElementById('displayUsername');
+    if (emailEl) emailEl.textContent = data.email || '—';
+    if (usernameEl) usernameEl.textContent = data.username || '—';
+
+    // Inputs del formulario
+    document.getElementById('inputFirstName').value = data.first_name || '';
+    document.getElementById('inputLastName').value  = data.last_name  || '';
+    document.getElementById('inputPhone').value     = data.phone_number || '';
+
+    // Avatar — si viene URL de foto la usamos, si no, generamos con initials
+    const avatarPreview = document.getElementById('avatarPreview');
+    if (data.photo) {
+        avatarPreview.src = data.photo;
+    } else {
+        const initials = ((data.first_name || '')[0] || '') + ((data.last_name || '')[0] || '');
+        const safeInitials = initials.trim() || (data.username || 'U')[0].toUpperCase();
+        avatarPreview.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(safeInitials)}&background=325190&color=fff&size=120`;
+    }
+}
+
+/**
+ * Limpia todos los mensajes de error del formulario.
+ */
+function clearErrors() {
+    ['inputFirstName', 'inputLastName', 'inputPhone'].forEach(id => {
+        document.getElementById(id).classList.remove('is-invalid');
+    });
+    document.getElementById('errorFirstName').textContent = '';
+    document.getElementById('errorLastName').textContent  = '';
+    const phoneErr = document.getElementById('errorPhone');
+    phoneErr.textContent = '';
+    phoneErr.classList.add('d-none');
+}
+
+/**
+ * CP 1.2 — Valida el formulario en el frontend antes de enviar al backend.
+ * Retorna true si es válido, false si hay errores.
+ */
+function validateForm() {
+    clearErrors();
+    let valid = true;
+
+    const firstName = document.getElementById('inputFirstName').value.trim();
+    const phone     = document.getElementById('inputPhone').value.trim();
+
+    if (!firstName) {
+        document.getElementById('inputFirstName').classList.add('is-invalid');
+        document.getElementById('errorFirstName').textContent = 'El nombre es obligatorio.';
+        valid = false;
+    } else if (firstName.length > 150) {
+        document.getElementById('inputFirstName').classList.add('is-invalid');
+        document.getElementById('errorFirstName').textContent = 'El nombre no puede superar 150 caracteres.';
+        valid = false;
+    }
+
+    if (phone) {
+        const digitsOnly = phone.replace(/[\s\-\(\)\+]/g, '');
+        if (!/^\d+$/.test(digitsOnly)) {
+            const phoneErr = document.getElementById('errorPhone');
+            document.getElementById('inputPhone').classList.add('is-invalid');
+            phoneErr.textContent = 'El teléfono solo puede contener dígitos. No se permiten letras.';
+            phoneErr.classList.remove('d-none');
+            valid = false;
+        } else if (digitsOnly.length < 10) {
+            const phoneErr = document.getElementById('errorPhone');
+            document.getElementById('inputPhone').classList.add('is-invalid');
+            phoneErr.textContent = 'El teléfono debe tener al menos 10 dígitos.';
+            phoneErr.classList.remove('d-none');
+            valid = false;
+        }
+    }
+
+    return valid;
+}
+
+// ──────────────────────────────────────────
+// Carga del perfil actual
+// ──────────────────────────────────────────
+
+/**
+ * Carga el perfil desde la API y rellena el formulario.
+ * También cae en los datos de localStorage como fallback rápido.
+ */
+async function loadCurrentProfile() {
+    // Relleno inmediato desde localStorage (CP 2.1 — sin flicker)
+    const cached = SecurityService.getUser();
+    if (cached) {
+        updateUIWithProfile(cached);
+        originalProfile = { ...cached };
+    }
+
+    try {
+        const data = await ProfileAPI.getProfile();
+        if (data) {
+            // Sincronizamos con el servidor (incluye phone_number y photo frescos)
+            const merged = { ...(cached || {}), ...data };
+            updateUIWithProfile(merged);
+            originalProfile = { ...merged };
+            // Actualizamos la sesión con los datos más recientes
+            SecurityService.updateSessionUser(data);
+        }
+    } catch (err) {
+        console.warn('No se pudo cargar el perfil desde la API:', err);
+        // No mostramos toast: ya teníamos los datos del localStorage
+    }
+}
+
+// ──────────────────────────────────────────
+// Vista previa de foto seleccionada
+// ──────────────────────────────────────────
+
+document.getElementById('avatarWrapper').addEventListener('click', () => {
+    document.getElementById('photoInput').click();
+});
+
+document.getElementById('photoInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('La imagen no puede superar 5 MB.', 'error');
+        e.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        document.getElementById('avatarPreview').src = ev.target.result;
+        document.getElementById('photoHint').textContent = `Nueva foto: ${file.name}`;
+        document.getElementById('photoHint').style.color = 'var(--primary-color)';
+    };
+    reader.readAsDataURL(file);
+});
+
+// ──────────────────────────────────────────
+// Envío del formulario — PATCH /api/users/profile/
+// ──────────────────────────────────────────
+
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // CP 1.2 — Valida antes de enviar
+    if (!validateForm()) return;
+
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Guardando…`;
+
+    // Construir FormData para soporte de foto
+    const formData = new FormData();
+    formData.append('first_name', document.getElementById('inputFirstName').value.trim());
+    formData.append('last_name',  document.getElementById('inputLastName').value.trim());
+
+    const phone = document.getElementById('inputPhone').value.trim();
+    if (phone) formData.append('phone_number', phone);
+
+    const photoFile = document.getElementById('photoInput').files[0];
+    if (photoFile) formData.append('photo', photoFile);
+
+    try {
+        // CP 1.1 — Llamada al endpoint PATCH /api/users/profile/
+        const updatedData = await ProfileAPI.updateProfile(formData);
+
+        if (updatedData) {
+            // CP 2.1 — Actualizar UI en tiempo real con los datos confirmados por el servidor
+            const merged = { ...(SecurityService.getUser() || {}), ...updatedData };
+            updateUIWithProfile(merged);
+            originalProfile = { ...merged };
+
+            showToast('¡Perfil actualizado correctamente!', 'success');
+
+            // Limpiar la referencia de foto seleccionada
+            document.getElementById('photoInput').value = '';
+            document.getElementById('photoHint').textContent = 'Haz clic en la foto para cambiarla (JPG, PNG · máx. 5 MB)';
+            document.getElementById('photoHint').style.color = '';
+        }
+    } catch (err) {
+        console.error('[perfil.html] Error al actualizar perfil:', err);
+
+        // Error de red (sin conexión al servidor Django)
+        if (err.networkError || err.status === 0) {
+            showToast('No se pudo conectar con el servidor. Verifica que Django esté corriendo en el puerto 8000.', 'error');
+        } else if (err.data) {
+            // CP 1.2 — Mostrar errores de validación del servidor campo a campo
+            const errData = err.data;
+            let anyFieldError = false;
+
+            if (errData.first_name) {
+                const msgs = Array.isArray(errData.first_name) ? errData.first_name : [errData.first_name];
+                document.getElementById('inputFirstName').classList.add('is-invalid');
+                document.getElementById('errorFirstName').textContent = msgs.join(' ');
+                anyFieldError = true;
+            }
+            if (errData.last_name) {
+                const msgs = Array.isArray(errData.last_name) ? errData.last_name : [errData.last_name];
+                document.getElementById('inputLastName').classList.add('is-invalid');
+                document.getElementById('errorLastName').textContent = msgs.join(' ');
+                anyFieldError = true;
+            }
+            if (errData.phone_number) {
+                const msgs = Array.isArray(errData.phone_number) ? errData.phone_number : [errData.phone_number];
+                const phoneErr = document.getElementById('errorPhone');
+                document.getElementById('inputPhone').classList.add('is-invalid');
+                phoneErr.textContent = msgs.join(' ');
+                phoneErr.classList.remove('d-none');
+                anyFieldError = true;
+            }
+            if (errData.photo) {
+                const msgs = Array.isArray(errData.photo) ? errData.photo : [errData.photo];
+                showToast('Foto: ' + msgs.join(' '), 'error');
+                anyFieldError = true;
+            }
+            if (!anyFieldError) {
+                // Mostrar error general del servidor (detail, non_field_errors, o mensaje genérico)
+                const msg = errData.detail
+                    || (Array.isArray(errData.non_field_errors) ? errData.non_field_errors.join(' ') : errData.non_field_errors)
+                    || `Error ${err.status} del servidor. Revisa la consola de Django.`;
+                showToast(msg, 'error');
+            }
+        } else {
+            showToast('Error inesperado. Abre la consola del navegador (F12) para más detalles.', 'error');
+        }
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Guardar cambios';
+    }
+});
+
+// ──────────────────────────────────────────
+// Inicialización de la página
+// ──────────────────────────────────────────
+loadCurrentProfile();
+</script>
+</body>
+</html>

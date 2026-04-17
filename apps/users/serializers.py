@@ -25,6 +25,7 @@ class UserSerializer(serializers.ModelSerializer):
             "role",
             "role_display",
             "phone_number",
+            "photo",
             "is_active",
             "created_at",
             "updated_at",
@@ -152,11 +153,70 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
-    """Serializer para actualización de perfil (RF04)."""
+    """
+    Serializer para actualización de perfil (RF04).
+
+    Criterios de aceptación:
+    - CP 1.1: Permite actualizar nombre, teléfono y foto de forma parcial.
+    - CP 1.2: Valida formato de teléfono (solo dígitos, mínimo 10 dígitos).
+    - CP 2.1: Retorna los datos actualizados para reflejar cambios en la UI.
+    """
+
+    # use_url=True garantiza que la URL de la foto sea absoluta en la respuesta
+    # allow_null=True + required=False permite PATCH sin enviar foto
+    photo = serializers.ImageField(
+        required=False,
+        allow_null=True,
+        use_url=True,
+    )
 
     class Meta:
         model = CustomUser
-        fields = ["first_name", "last_name", "email", "phone_number"]
+        fields = ["first_name", "last_name", "phone_number", "photo"]
+
+    def validate_first_name(self, value):
+        """Valida que el nombre no esté vacío y solo tenga caracteres válidos."""
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("El nombre no puede estar vacío.")
+        if len(value) > 150:
+            raise serializers.ValidationError(
+                "El nombre no puede superar 150 caracteres."
+            )
+        return value
+
+    def validate_last_name(self, value):
+        """Valida que el apellido no supere el límite."""
+        value = value.strip()
+        if len(value) > 150:
+            raise serializers.ValidationError(
+                "El apellido no puede superar 150 caracteres."
+            )
+        return value
+
+    def validate_phone_number(self, value):
+        """
+        CP 1.2 — Valida formato de teléfono:
+        - Solo se permiten dígitos (con '+' opcional al inicio).
+        - Mínimo 10 dígitos, máximo 15.
+        """
+        import re
+
+        if value:
+            digits_only = re.sub(r"[\s\-\(\)\+]", "", value)
+            if not digits_only.isdigit():
+                raise serializers.ValidationError(
+                    "El teléfono solo puede contener dígitos. No se permiten letras ni caracteres especiales."
+                )
+            if len(digits_only) < 10:
+                raise serializers.ValidationError(
+                    "El número de teléfono debe tener al menos 10 dígitos."
+                )
+            if len(digits_only) > 15:
+                raise serializers.ValidationError(
+                    "El número de teléfono no puede superar 15 dígitos."
+                )
+        return value
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -180,3 +240,54 @@ class LoginAttemptSerializer(serializers.ModelSerializer):
             "timestamp",
         ]
         read_only_fields = ["id", "timestamp"]
+
+
+# =============================================================================
+# RF06 — Recuperación de contraseña por email
+# =============================================================================
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """
+    RF06 — Solicitud de recuperación de contraseña.
+
+    Valida que el correo exista en el sistema.
+    Siempre retorna 200 (no revela si el email existe o no por seguridad).
+    """
+
+    email = serializers.EmailField(
+        help_text="Correo electrónico registrado en el sistema."
+    )
+
+    def validate_email(self, value):
+        return value.lower()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """
+    RF06 — Confirmación del reset con nuevo password.
+
+    Valida el token HMAC y aplica las reglas de contraseña.
+    """
+
+    uid = serializers.CharField(help_text="UID de usuario codificado en base64.")
+    token = serializers.CharField(help_text="Token de recuperación.")
+    new_password = serializers.CharField(
+        min_length=8,
+        write_only=True,
+        style={"input_type": "password"},
+        help_text="Nueva contraseña (mínimo 8 caracteres).",
+    )
+    new_password_confirm = serializers.CharField(
+        min_length=8,
+        write_only=True,
+        style={"input_type": "password"},
+        help_text="Repite la nueva contraseña.",
+    )
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password_confirm"]:
+            raise serializers.ValidationError(
+                {"new_password_confirm": "Las contraseñas no coinciden."}
+            )
+        return attrs

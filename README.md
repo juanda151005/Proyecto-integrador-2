@@ -388,4 +388,5 @@ git push origin feature/nombre-descriptivo
 | Juan David Velásquez Restrepo | Desarrollador backend |
 | Esteban Salazar Orozco | Diseñador / UX |
 | Emmanuel Castañeda Cano | Analista de negocio | 
+| Jean Paul Guillot Gallego | Documentador y tester | 
 
