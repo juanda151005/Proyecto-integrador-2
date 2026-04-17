@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoría crítica - Smart Migration System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="d-flex align-items-center gap-2 mb-5 px-2">
+            <i class="bi bi-rocket-takeoff text-primary fs-3"></i>
+            <h4 class="mb-0 fw-bold">SmartMig</h4>
+        </div>
+
+        <nav class="nav flex-column gap-1">
+            <a href="dashboard.html" class="nav-link-custom">
+                <i class="bi bi-house-door"></i> Inicio
+            </a>
+
+            <a href="recargas.html" class="nav-link-custom" id="navRecargas">
+                <i class="bi bi-cash-stack"></i> Registro de Recargas
+            </a>
+
+            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers" data-rbac-roles="ADMIN">
+                <i class="bi bi-people"></i> Gestión de Usuarios
+            </a>
+
+            <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora" data-rbac-roles="ADMIN">
+                <i class="bi bi-journal-text"></i> Bitácora de Login
+            </a>
+
+            <a href="auditoria.html" class="nav-link-custom active d-none" id="navAuditoria" data-rbac-roles="ADMIN">
+                <i class="bi bi-shield-lock"></i> Auditoría crítica
+            </a>
+
+            <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN">
+                <i class="bi bi-sliders"></i> Configuración global
+            </a>
+
+            <a href="clientes.html" class="nav-link-custom">
+                <i class="bi bi-person-lines-fill"></i> Clientes Prepago
+            </a>
+
+            <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
+                <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
+            </a>
+        </nav>
+    </div>
+
+    <div class="main-content fade-in">
+        <header class="mb-4">
+            <h2 class="fw-bold">Registro de auditoría</h2>
+            <p class="text-secondary mb-0">
+                RF14 — Operaciones críticas (clientes, reglas de negocio). Solo rol <strong>Administrador</strong>.
+                Los registros no pueden editarse ni eliminarse.
+            </p>
+        </header>
+
+        <div class="glass-panel p-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <h5 class="mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-list-ul text-primary"></i> Historial
+                </h5>
+                <span class="text-secondary small" id="auditMeta"></span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-borderless table-custom align-middle">
+                    <thead>
+                        <tr>
+                            <th>Registro</th>
+                            <th>Tipo</th>
+                            <th>Acción</th>
+                            <th>Fecha</th>
+                            <th>Antes / Después</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center text-secondary py-4">Cargando…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-none justify-content-between align-items-center flex-wrap gap-2 mt-3" id="auditPagination">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnPrev" disabled>
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </button>
+                <span class="text-secondary small" id="auditPageInfo"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnNext" disabled>
+                    Siguiente <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="auditDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+            <div class="modal-content border-0" style="background: var(--bg-gradient-start);">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">Detalle de auditoría</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="small text-secondary mb-3" id="auditDetailMeta"></div>
+                    <pre class="small mb-0 text-secondary" id="auditDetailJson" style="white-space: pre-wrap;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        const ACTION_LABELS = {
+            CREATE: 'Creación',
+            UPDATE: 'Actualización',
+            DELETE: 'Eliminación',
+            LOGIN: 'Inicio de sesión',
+            EXPORT: 'Exportación',
+            ELIGIBILITY_CHECK: 'Evaluación de elegibilidad',
+            NOTIFICATION_SENT: 'Notificación enviada',
+        };
+
+        if (!SecurityService.initPage()) {
+            // Redirige si no es ADMIN
+        } else {
+            let currentPage = 1;
+            let totalCount = 0;
+            const pageSize = 20;
+
+            const tbody = document.getElementById('auditTableBody');
+            const meta = document.getElementById('auditMeta');
+            const pag = document.getElementById('auditPagination');
+            const btnPrev = document.getElementById('btnPrev');
+            const btnNext = document.getElementById('btnNext');
+            const pageInfo = document.getElementById('auditPageInfo');
+            const detailMeta = document.getElementById('auditDetailMeta');
+            const detailJson = document.getElementById('auditDetailJson');
+            const detailModal = new bootstrap.Modal(document.getElementById('auditDetailModal'));
+            const detailMap = {};
+
+            function badgeClass(action) {
+                if (action === 'DELETE') return 'bg-danger';
+                if (action === 'UPDATE') return 'bg-warning text-dark';
+                if (action === 'CREATE') return 'bg-success';
+                return 'bg-secondary';
+            }
+
+            window.openAuditDetail = function openAuditDetail(detailId) {
+                const detail = detailMap[detailId];
+                if (!detail) return;
+                detailMeta.innerHTML = `
+                    <strong>Registro:</strong> ${detail.targetName} |
+                    <strong>Tipo:</strong> ${detail.typeLabel} |
+                    <strong>Entidad:</strong> ${detail.modelName} |
+                    <strong>ID:</strong> ${detail.objectId}
+                `;
+                detailJson.textContent = detail.changesJson;
+                detailModal.show();
+            };
+
+            async function loadAudit(page) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary py-4">Cargando…</td></tr>';
+                try {
+                    const data = await fetchAPI(`/management/audit-logs/?page=${page}&ordering=-timestamp`);
+                    const rows = data.results || data;
+                    totalCount = data.count != null ? data.count : rows.length;
+                    currentPage = page;
+
+                    meta.textContent = totalCount
+                        ? `${totalCount} registro(s) en total`
+                        : 'Sin registros';
+
+                    if (!rows.length) {
+                        tbody.innerHTML =
+                            '<tr><td colspan="5" class="text-center text-secondary py-4">No hay eventos de auditoría aún. Elimina un cliente o modifica una regla de negocio para generar entradas.</td></tr>';
+                        pag.classList.add('d-none');
+                        pag.classList.remove('d-flex');
+                        return;
+                    }
+
+                    Object.keys(detailMap).forEach((k) => delete detailMap[k]);
+                    tbody.innerHTML = rows.map((row, index) => {
+                        const when = row.timestamp
+                            ? new Date(row.timestamp).toLocaleString('es-CO')
+                            : '—';
+                        const before = row.changes?.before || {};
+                        const after = row.changes?.after || {};
+                        let targetName = '—';
+                        if (row.model_name === 'Client') {
+                            targetName = before.full_name || after.full_name || before.phone_number || after.phone_number || 'Cliente';
+                        } else if (row.model_name === 'BusinessRule') {
+                            targetName = before.key || after.key || before.description || after.description || 'Regla';
+                        }
+                        const typeLabel = row.model_name === 'Client'
+                            ? 'Cliente'
+                            : row.model_name === 'BusinessRule'
+                                ? 'Regla'
+                                : (row.model_name || '—');
+                        const act = ACTION_LABELS[row.action] || row.action;
+                        const detailId = `audit-${page}-${index}`;
+                        const changesJson = row.changes && Object.keys(row.changes).length
+                            ? JSON.stringify(row.changes, null, 2)
+                            : '—';
+                        detailMap[detailId] = {
+                            targetName,
+                            typeLabel,
+                            modelName: row.model_name || '—',
+                            objectId: row.object_id || '—',
+                            changesJson,
+                        };
+                        return `
+                            <tr>
+                                <td class="fw-medium">${targetName}</td>
+                                <td><span class="badge bg-info text-dark bg-opacity-75">${typeLabel}</span></td>
+                                <td><span class="badge ${badgeClass(row.action)} bg-opacity-75">${act}</span></td>
+                                <td class="text-secondary text-nowrap">${when}</td>
+                                <td>
+                                    <button
+                                        class="btn btn-sm btn-outline-secondary"
+                                        type="button"
+                                        onclick="openAuditDetail('${detailId}')"
+                                    >
+                                        Ver detalle
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+                    pag.classList.remove('d-none');
+                    pag.classList.add('d-flex');
+                    btnPrev.disabled = page <= 1;
+                    btnNext.disabled = page >= totalPages;
+                    pageInfo.textContent = `Página ${page} de ${totalPages}`;
+                } catch (e) {
+                    console.error(e);
+                    tbody.innerHTML =
+                        '<tr><td colspan="5" class="text-center text-danger py-4">No se pudo cargar la auditoría. ¿Tu usuario es Administrador?</td></tr>';
+                    pag.classList.add('d-none');
+                    pag.classList.remove('d-flex');
+                }
+            }
+
+            btnPrev.addEventListener('click', () => {
+                if (currentPage > 1) loadAudit(currentPage - 1);
+            });
+            btnNext.addEventListener('click', () => {
+                loadAudit(currentPage + 1);
+            });
+
+            loadAudit(1);
+        }
+    </script>
+</body>
+</html>

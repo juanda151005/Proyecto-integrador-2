@@ -6,6 +6,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.management.audit import log_critical_action, snapshot_client
+from apps.management.models import AuditLog
+
 from .filters import ClientFilter
 from .models import Client
 from .permissions import IsAnalistaOrAdmin
@@ -48,6 +51,19 @@ class ClientDetailView(generics.RetrieveUpdateDestroyAPIView):
             return ClientUpdateSerializer
         return ClientSerializer
 
+    def perform_update(self, serializer):
+        before = snapshot_client(serializer.instance)
+        client = serializer.save()
+        log_critical_action(
+            user=self.request.user,
+            action=AuditLog.ActionChoices.UPDATE,
+            model_name="Client",
+            object_id=str(client.pk),
+            before=before,
+            after=snapshot_client(client),
+            request=self.request,
+        )
+
     def destroy(self, request, *args, **kwargs):
         client = self.get_object()
         # RF09 — Validación previa: no eliminar clientes migrados
@@ -58,7 +74,20 @@ class ClientDetailView(generics.RetrieveUpdateDestroyAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        return super().destroy(request, *args, **kwargs)
+        object_id = str(client.pk)
+        before = snapshot_client(client)
+        response = super().destroy(request, *args, **kwargs)
+        if response.status_code == status.HTTP_204_NO_CONTENT:
+            log_critical_action(
+                user=request.user,
+                action=AuditLog.ActionChoices.DELETE,
+                model_name="Client",
+                object_id=object_id,
+                before=before,
+                after=None,
+                request=request,
+            )
+        return response
 
 
 class ClientExportCSVView(APIView):

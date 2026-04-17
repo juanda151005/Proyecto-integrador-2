@@ -7,6 +7,7 @@ from apps.communications.models import NotificationLog
 from apps.core_business.models import Client
 from apps.users.permissions import IsAdmin, IsAdminOrAnalyst
 
+from .audit import log_critical_action, snapshot_business_rule
 from .models import AuditLog, BusinessRule, GlobalSystemSettings
 from .serializers import (
     AuditLogSerializer,
@@ -42,6 +43,18 @@ class BusinessRuleListCreateView(generics.ListCreateAPIView):
             return [IsAdmin()]
         return [IsAuthenticated()]
 
+    def perform_create(self, serializer):
+        rule = serializer.save()
+        log_critical_action(
+            user=self.request.user,
+            action=AuditLog.ActionChoices.CREATE,
+            model_name="BusinessRule",
+            object_id=str(rule.pk),
+            before=None,
+            after=snapshot_business_rule(rule),
+            request=self.request,
+        )
+
 
 class BusinessRuleDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
@@ -52,16 +65,43 @@ class BusinessRuleDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = BusinessRuleSerializer
     permission_classes = [IsAdmin]
 
+    def perform_update(self, serializer):
+        before = snapshot_business_rule(serializer.instance)
+        rule = serializer.save()
+        log_critical_action(
+            user=self.request.user,
+            action=AuditLog.ActionChoices.UPDATE,
+            model_name="BusinessRule",
+            object_id=str(rule.pk),
+            before=before,
+            after=snapshot_business_rule(rule),
+            request=self.request,
+        )
+
+    def perform_destroy(self, instance):
+        object_id = str(instance.pk)
+        before = snapshot_business_rule(instance)
+        instance.delete()
+        log_critical_action(
+            user=self.request.user,
+            action=AuditLog.ActionChoices.DELETE,
+            model_name="BusinessRule",
+            object_id=object_id,
+            before=before,
+            after=None,
+            request=self.request,
+        )
+
 
 class AuditLogListView(generics.ListAPIView):
     """
     GET — Lista registros de auditoría (RF14).
-    Solo ADMIN y ANALYST.
+    Solo rol Administrador (issue #14).
     """
 
     queryset = AuditLog.objects.select_related("user").all()
     serializer_class = AuditLogSerializer
-    permission_classes = [IsAdminOrAnalyst]
+    permission_classes = [IsAdmin]
     filterset_fields = ["action", "model_name", "user"]
     ordering_fields = ["timestamp"]
 

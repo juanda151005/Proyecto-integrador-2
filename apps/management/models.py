@@ -1,5 +1,18 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+
+class ImmutableAuditLogQuerySet(models.QuerySet):
+    def delete(self):
+        raise ValidationError(
+            "Los registros de auditoría son inmutables y no pueden eliminarse."
+        )
+
+
+class AuditLogManager(models.Manager):
+    def get_queryset(self):
+        return ImmutableAuditLogQuerySet(self.model, using=self._db)
 
 
 class GlobalSystemSettings(models.Model):
@@ -90,6 +103,8 @@ class AuditLog(models.Model):
     Registra acciones importantes del sistema.
     """
 
+    objects = AuditLogManager()
+
     class ActionChoices(models.TextChoices):
         CREATE = "CREATE", "Creación"
         UPDATE = "UPDATE", "Actualización"
@@ -137,6 +152,18 @@ class AuditLog(models.Model):
         verbose_name = "Registro de auditoría"
         verbose_name_plural = "Registros de auditoría"
         ordering = ["-timestamp"]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and AuditLog.objects.filter(pk=self.pk).exists():
+            raise ValidationError(
+                "Los registros de auditoría son inmutables y no pueden modificarse."
+            )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(
+            "Los registros de auditoría son inmutables y no pueden eliminarse."
+        )
 
     def __str__(self):
         return f"[{self.get_action_display()}] {self.model_name} #{self.object_id} — {self.timestamp:%Y-%m-%d %H:%M}"
