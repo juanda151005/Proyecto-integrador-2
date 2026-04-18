@@ -111,6 +111,7 @@ class SendOfferView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+
 class BulkNotifyEligibleView(APIView):
     """
     POST — Envío masivo de ofertas a todos los clientes elegibles (RF15).
@@ -159,7 +160,6 @@ class BulkNotifyEligibleView(APIView):
                 **results,
             }
         )
-
 
 
 class ExternalAPIQueryView(APIView):

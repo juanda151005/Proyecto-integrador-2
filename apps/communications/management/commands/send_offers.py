@@ -101,13 +101,17 @@ class Command(BaseCommand):
             return
 
         if dry_run:
-            self.stdout.write(self.style.SUCCESS("\n[DRY-RUN] Clientes que recibirían la oferta:"))
+            self.stdout.write(
+                self.style.SUCCESS("\n[DRY-RUN] Clientes que recibirían la oferta:")
+            )
             for client in eligible_clients:
                 self.stdout.write(
                     f"  • {client.full_name} | {client.phone_number} | "
                     f"Plan: {client.get_current_plan_display()}"
                 )
-            self.stdout.write(self.style.SUCCESS(f"\nTotal: {total} cliente(s). Nada fue enviado.\n"))
+            self.stdout.write(
+                self.style.SUCCESS(f"\nTotal: {total} cliente(s). Nada fue enviado.\n")
+            )
             return
 
         # ── Envío real ─────────────────────────────────────────────────────

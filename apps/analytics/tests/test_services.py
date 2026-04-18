@@ -17,7 +17,6 @@ from apps.management.models import BusinessRule
 from ..models import TopUp
 from ..services import EligibilityEngine
 
-
 # =============================================================================
 # Helpers — datos reutilizables
 # =============================================================================

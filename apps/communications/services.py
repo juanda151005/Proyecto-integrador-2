@@ -115,7 +115,6 @@ class TwilioService:
             logger.error(f"Error al enviar WhatsApp a {clean_number}: {e}")
             return {"success": False, "error": str(e)}
 
-
     # ── RF15: Disparadores de oferta ──────────────────────────────────────────
 
     def send_whatsapp_offer(self, client):
@@ -145,9 +144,11 @@ class TwilioService:
             client=client,
             message=message,
             channel=NotificationLog.ChannelChoices.WHATSAPP,
-            status=NotificationLog.StatusChoices.SENT
-            if result["success"]
-            else NotificationLog.StatusChoices.FAILED,
+            status=(
+                NotificationLog.StatusChoices.SENT
+                if result["success"]
+                else NotificationLog.StatusChoices.FAILED
+            ),
             external_id=result.get("sid", ""),
         )
 
@@ -191,9 +192,11 @@ class TwilioService:
             client=client,
             message=message,
             channel=NotificationLog.ChannelChoices.SMS,
-            status=NotificationLog.StatusChoices.SENT
-            if result["success"]
-            else NotificationLog.StatusChoices.FAILED,
+            status=(
+                NotificationLog.StatusChoices.SENT
+                if result["success"]
+                else NotificationLog.StatusChoices.FAILED
+            ),
             external_id=result.get("sid", ""),
         )
 
