@@ -1,4 +1,3 @@
-# Proyecto-integrador-2
 # Sistema Inteligente de Migración de Clientes Prepago a Postpago
 
 Sistema backend en Django REST Framework que identifica clientes prepago con alto
@@ -388,5 +387,4 @@ git push origin feature/nombre-descriptivo
 | Juan David Velásquez Restrepo | Desarrollador backend |
 | Esteban Salazar Orozco | Diseñador / UX |
 | Emmanuel Castañeda Cano | Analista de negocio | 
-| Jean Paul Guillot Gallego | Documentador y tester | 
 

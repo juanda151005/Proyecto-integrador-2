@@ -67,9 +67,24 @@ class BusinessRuleRF16Test(TestCase):
         print("Paso 2: evaluación inicial is_eligible=False")
         # Escenario con promedio 60000 -> no elegible
         client = make_client(phone="3009876543")
-        TopUp.objects.create(client=client, amount=60000, date="2025-01-15", channel=TopUp.ChannelChoices.APP)
-        TopUp.objects.create(client=client, amount=60000, date="2025-02-15", channel=TopUp.ChannelChoices.APP)
-        TopUp.objects.create(client=client, amount=60000, date="2025-03-15", channel=TopUp.ChannelChoices.APP)
+        TopUp.objects.create(
+            client=client,
+            amount=60000,
+            date="2025-01-15",
+            channel=TopUp.ChannelChoices.APP,
+        )
+        TopUp.objects.create(
+            client=client,
+            amount=60000,
+            date="2025-02-15",
+            channel=TopUp.ChannelChoices.APP,
+        )
+        TopUp.objects.create(
+            client=client,
+            amount=60000,
+            date="2025-03-15",
+            channel=TopUp.ChannelChoices.APP,
+        )
 
         result = EligibilityEngine.evaluate_client(client)
         self.assertFalse(result["is_eligible"])

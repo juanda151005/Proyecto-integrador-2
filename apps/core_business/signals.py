@@ -44,9 +44,7 @@ def auto_send_offer_on_eligible(sender, instance, **kwargs):
     except sender.DoesNotExist:
         return
 
-    eligibility_just_activated = (
-        not previous.is_eligible and instance.is_eligible
-    )
+    eligibility_just_activated = not previous.is_eligible and instance.is_eligible
 
     if not eligibility_just_activated:
         return
