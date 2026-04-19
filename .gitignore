@@ -33,3 +33,7 @@ Thumbs.db
 staticfiles/
 media/
 *.log
+
+# Assistant
+.claude/
+
