@@ -124,19 +124,12 @@ class BulkNotifyEligibleView(APIView):
         serializer = BulkNotificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        use_test = serializer.validated_data.get("use_test_eligible", False)
         channel = serializer.validated_data["channel"]
 
-        if use_test:
-            eligible_clients = Client.objects.filter(
-                is_test_eligible=True,
-                status=Client.StatusChoices.ACTIVE,
-            )
-        else:
-            eligible_clients = Client.objects.filter(
-                is_eligible=True,
-                status=Client.StatusChoices.ACTIVE,
-            )
+        eligible_clients = Client.objects.filter(
+            is_eligible=True,
+            status=Client.StatusChoices.ACTIVE,
+        )
 
         if not eligible_clients.exists():
             return Response(

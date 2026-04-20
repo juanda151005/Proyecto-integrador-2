@@ -46,5 +46,7 @@ class SendNotificationSerializer(serializers.Serializer):
 class BulkNotificationSerializer(serializers.Serializer):
     """Serializer para envío masivo de ofertas a elegibles (RF15)."""
 
-    channel = serializers.ChoiceField(choices=NotificationLog.ChannelChoices.choices)
-    message = serializers.CharField(max_length=1000)
+    channel = serializers.ChoiceField(
+        choices=NotificationLog.ChannelChoices.choices,
+        default=NotificationLog.ChannelChoices.WHATSAPP,
+    )
