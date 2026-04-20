@@ -34,17 +34,12 @@ def recalculate_average_spending_on_topup(sender, instance, created, **kwargs):
     from .services import EligibilityEngine
 
     client = instance.client
-    average, total_topups, months = EligibilityEngine.calculate_average_spending(client)
-
-    client.average_spending = average
-    client.save(update_fields=["average_spending"])
+    # RF13/RF15 — Al evaluar el cliente, se actualiza el promedio,
+    # el estado is_eligible y se dispara la oferta si corresponde.
+    EligibilityEngine.evaluate_client(client)
 
     logger.info(
-        "[RF12-signal] Gasto promedio recalculado para cliente %s (%s): "
-        "$%s (%d recargas en %d meses)",
+        "[RF12-signal] Evaluación completa (promedio y elegibilidad) para cliente %s (%s)",
         client.pk,
         client.phone_number,
-        average,
-        total_topups,
-        months,
     )

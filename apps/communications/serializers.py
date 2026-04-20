@@ -50,10 +50,3 @@ class BulkNotificationSerializer(serializers.Serializer):
         choices=NotificationLog.ChannelChoices.choices,
         default=NotificationLog.ChannelChoices.WHATSAPP,
     )
-    use_test_eligible = serializers.BooleanField(
-        default=False,
-        help_text=(
-            "Si True, usa is_test_eligible en lugar de is_eligible. "
-            "Permite probar RF15 sin depender del motor RF12."
-        ),
-    )
