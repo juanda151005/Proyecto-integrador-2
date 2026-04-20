@@ -25,6 +25,16 @@ class NotificationLogSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "external_id", "sent_at", "updated_at"]
 
 
+class SendOfferSerializer(serializers.Serializer):
+    """RF15 — Serializer para disparar la oferta personalizada a un cliente."""
+
+    client_id = serializers.IntegerField()
+    channel = serializers.ChoiceField(
+        choices=NotificationLog.ChannelChoices.choices,
+        default=NotificationLog.ChannelChoices.WHATSAPP,
+    )
+
+
 class SendNotificationSerializer(serializers.Serializer):
     """Serializer para enviar una notificación a un cliente."""
 
