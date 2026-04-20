@@ -25,18 +25,8 @@ class NotificationLogSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "external_id", "sent_at", "updated_at"]
 
 
-class SendOfferSerializer(serializers.Serializer):
-    """RF15 — Serializer para disparar la oferta personalizada a un cliente."""
-
-    client_id = serializers.IntegerField()
-    channel = serializers.ChoiceField(
-        choices=NotificationLog.ChannelChoices.choices,
-        default=NotificationLog.ChannelChoices.WHATSAPP,
-    )
-
-
 class SendNotificationSerializer(serializers.Serializer):
-    """Serializer para enviar una notificación libre a un cliente."""
+    """Serializer para enviar una notificación a un cliente."""
 
     client_id = serializers.IntegerField()
     channel = serializers.ChoiceField(choices=NotificationLog.ChannelChoices.choices)
@@ -44,16 +34,7 @@ class SendNotificationSerializer(serializers.Serializer):
 
 
 class BulkNotificationSerializer(serializers.Serializer):
-    """RF15 — Serializer para envío masivo de ofertas a elegibles."""
+    """Serializer para envío masivo de ofertas a elegibles (RF15)."""
 
-    channel = serializers.ChoiceField(
-        choices=NotificationLog.ChannelChoices.choices,
-        default=NotificationLog.ChannelChoices.WHATSAPP,
-    )
-    use_test_eligible = serializers.BooleanField(
-        default=False,
-        help_text=(
-            "Si True, usa is_test_eligible en lugar de is_eligible. "
-            "Permite probar RF15 sin depender del motor RF12."
-        ),
-    )
+    channel = serializers.ChoiceField(choices=NotificationLog.ChannelChoices.choices)
+    message = serializers.CharField(max_length=1000)
