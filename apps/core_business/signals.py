@@ -57,7 +57,7 @@ def auto_send_offer_on_eligible(sender, instance, **kwargs):
         instance.phone_number,
     )
     print(
-        f"[RF15-signal] Disparo automático → cliente={instance.pk} "
+        f"[RF15-signal] Disparo automatico -> cliente={instance.pk} "
         f"({instance.phone_number})"
     )
 
