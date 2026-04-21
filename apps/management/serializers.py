@@ -73,3 +73,4 @@ class ConversionReportSerializer(serializers.Serializer):
     accepted = serializers.IntegerField()
     rejected = serializers.IntegerField()
     pending = serializers.IntegerField()
+    average_spending_global = serializers.FloatField(required=False)

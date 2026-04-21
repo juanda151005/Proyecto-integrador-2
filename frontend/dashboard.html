@@ -132,6 +132,30 @@
     <script>
         // RF19: Guard centralizado — verifica auth y aplica RBAC en UI
         SecurityService.initPage();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetchAPI('/management/reports/conversion/', { method: 'GET' });
+                
+                // Seleccionar los elementos H2 de las tarjetas usando selectores precisos
+                const eligibleEl = document.querySelector('.col-md-4:nth-child(1) h2');
+                const migratedEl = document.querySelector('.col-md-4:nth-child(2) h2');
+                const spendingEl = document.querySelector('.col-md-4:nth-child(3) h2');
+                
+                if (eligibleEl) eligibleEl.textContent = response.eligible_clients || "0";
+                if (migratedEl) migratedEl.textContent = response.migrated_clients || "0";
+                if (spendingEl) {
+                    const formated = new Intl.NumberFormat('es-CO', { 
+                        style: 'currency', 
+                        currency: 'COP',
+                        maximumFractionDigits: 0
+                    }).format(response.average_spending_global || 0);
+                    spendingEl.textContent = formated;
+                }
+            } catch (error) {
+                console.error("Error cargando estadísticas del dashboard:", error);
+            }
+        });
     </script>
 </body>
 </html>

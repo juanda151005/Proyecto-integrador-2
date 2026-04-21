@@ -119,6 +119,10 @@ class ConversionReportView(APIView):
         migrated = Client.objects.filter(status=Client.StatusChoices.MIGRATED).count()
         conversion_rate = (migrated / total * 100) if total > 0 else 0
 
+        from django.db.models import Avg
+        avg_spending = Client.objects.aggregate(Avg('average_spending'))['average_spending__avg']
+        avg_spending = float(avg_spending) if avg_spending else 0.0
+
         accepted = NotificationLog.objects.filter(status="ACCEPTED").count()
         rejected = NotificationLog.objects.filter(status="REJECTED").count()
         pending = NotificationLog.objects.filter(status="SENT").count()
@@ -131,6 +135,7 @@ class ConversionReportView(APIView):
             "accepted": accepted,
             "rejected": rejected,
             "pending": pending,
+            "average_spending_global": avg_spending,
         }
 
         serializer = ConversionReportSerializer(data)

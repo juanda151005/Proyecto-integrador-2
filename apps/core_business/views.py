@@ -11,7 +11,6 @@ from apps.management.models import AuditLog
 
 from .filters import ClientFilter
 from .models import Client
-from .permissions import IsAnalistaOrAdmin
 from .serializers import (
     ClientCreateSerializer,
     ClientSerializer,
@@ -27,7 +26,6 @@ class ClientListCreateView(generics.ListCreateAPIView):
 
     queryset = Client.objects.all()
     filterset_class = ClientFilter
-    permission_classes = [IsAnalistaOrAdmin]
     search_fields = ["full_name", "phone_number", "document_number"]
     ordering_fields = ["created_at", "average_spending", "activation_date"]
 
@@ -44,7 +42,6 @@ class ClientDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
 
     queryset = Client.objects.all()
-    permission_classes = [IsAnalistaOrAdmin]
 
     def get_serializer_class(self):
         if self.request.method in ("PUT", "PATCH"):

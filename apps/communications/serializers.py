@@ -36,7 +36,7 @@ class SendOfferSerializer(serializers.Serializer):
 
 
 class SendNotificationSerializer(serializers.Serializer):
-    """Serializer para enviar una notificación libre a un cliente."""
+    """Serializer para enviar una notificación a un cliente."""
 
     client_id = serializers.IntegerField()
     channel = serializers.ChoiceField(choices=NotificationLog.ChannelChoices.choices)
@@ -44,7 +44,7 @@ class SendNotificationSerializer(serializers.Serializer):
 
 
 class BulkNotificationSerializer(serializers.Serializer):
-    """RF15 — Serializer para envío masivo de ofertas a elegibles."""
+    """Serializer para envío masivo de ofertas a elegibles (RF15)."""
 
     channel = serializers.ChoiceField(
         choices=NotificationLog.ChannelChoices.choices,
