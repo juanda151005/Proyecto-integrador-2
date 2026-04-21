@@ -18,10 +18,34 @@ Conexión con RF14:
 
 import logging
 
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
+
+_ELIGIBILITY_UPDATE_FIELDS = frozenset({"average_spending", "is_eligible"})
+
+
+@receiver(post_save, sender="core_business.Client")
+def evaluate_eligibility_on_save(sender, instance, created, update_fields, **kwargs):
+    """
+    RF13 — Re-evalúa elegibilidad por antigüedad cada vez que se crea
+    o actualiza un cliente, excepto cuando el propio evaluate_client
+    está guardando los campos de resultado (evita recursión infinita).
+    """
+    if update_fields == _ELIGIBILITY_UPDATE_FIELDS:
+        return
+
+    from apps.analytics.services import EligibilityEngine
+
+    try:
+        EligibilityEngine.evaluate_client(instance)
+    except Exception as exc:
+        logger.error(
+            "[RF13-signal] Error al evaluar elegibilidad del cliente %s: %s",
+            instance.pk,
+            exc,
+        )
 
 
 @receiver(pre_save, sender="core_business.Client")
@@ -57,7 +81,7 @@ def auto_send_offer_on_eligible(sender, instance, **kwargs):
         instance.phone_number,
     )
     print(
-        f"[RF15-signal] Disparo automático → cliente={instance.pk} "
+        f"[RF15-signal] Disparo automatico -> cliente={instance.pk} "
         f"({instance.phone_number})"
     )
 
