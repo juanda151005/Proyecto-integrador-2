@@ -3,7 +3,9 @@ Señales de analytics — RF12: Recálculo automático de gasto promedio.
 
 Cuando se crea una nueva recarga (TopUp), el sistema recalcula
 automáticamente el gasto promedio mensual del cliente asociado
-y lo persiste en su perfil.
+y lo persiste en su perfil. También re-evalúa la elegibilidad RF13
+(basada en antigüedad), de modo que si el cliente ya superó los
+60 días, se marca elegible en ese momento.
 
 Criterios de aceptación RF12:
 - CP 1.1: Al registrar una nueva recarga, el gasto promedio se
