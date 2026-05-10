@@ -51,3 +51,67 @@ class NotificationLog(models.Model):
 
     def __str__(self):
         return f"[{self.get_channel_display()}] {self.client.phone_number} — {self.get_status_display()}"
+
+
+class Conversation(models.Model):
+    """
+    Conversación iniciada tras el envío de una notificación.
+    Registra la respuesta del cliente (Sí/No), el estado del chat y el asesor asignado.
+    """
+
+    class StatusChoices(models.TextChoices):
+        OPEN = "OPEN", "Abierta"
+        CLOSED = "CLOSED", "Cerrada"
+
+    class ResponseChoices(models.TextChoices):
+        YES = "YES", "Sí me interesa"
+        NO = "NO", "No, gracias"
+
+    notification = models.OneToOneField(
+        NotificationLog,
+        on_delete=models.CASCADE,
+        related_name="conversation",
+        verbose_name="Notificación origen",
+    )
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        related_name="conversations",
+        verbose_name="Cliente",
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=StatusChoices.choices,
+        default=StatusChoices.OPEN,
+        verbose_name="Estado del chat",
+    )
+    client_response = models.CharField(
+        max_length=5,
+        choices=ResponseChoices.choices,
+        blank=True,
+        verbose_name="Respuesta del cliente",
+    )
+    had_response = models.BooleanField(
+        default=False,
+        verbose_name="¿El cliente respondió?",
+    )
+    advisor = models.ForeignKey(
+        "users.CustomUser",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assigned_conversations",
+        verbose_name="Asesor asignado",
+    )
+    notes = models.TextField(blank=True, verbose_name="Notas del asesor")
+    opened_at = models.DateTimeField(auto_now_add=True, verbose_name="Abierta el")
+    closed_at = models.DateTimeField(null=True, blank=True, verbose_name="Cerrada el")
+
+    class Meta:
+        verbose_name = "Conversación"
+        verbose_name_plural = "Conversaciones"
+        ordering = ["-opened_at"]
+
+    def __str__(self):
+        resp = self.get_client_response_display() if self.client_response else "Sin respuesta"
+        return f"{self.client.phone_number} — {self.get_status_display()} — {resp}"

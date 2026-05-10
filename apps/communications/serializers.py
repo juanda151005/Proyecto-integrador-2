@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import NotificationLog
+from .models import Conversation, NotificationLog
 
 
 class NotificationLogSerializer(serializers.ModelSerializer):
@@ -50,3 +50,58 @@ class BulkNotificationSerializer(serializers.Serializer):
         choices=NotificationLog.ChannelChoices.choices,
         default=NotificationLog.ChannelChoices.WHATSAPP,
     )
+
+
+class ConversationSerializer(serializers.ModelSerializer):
+    """Serializer para conversaciones (flujo asesor / chat)."""
+
+    client_phone = serializers.CharField(source="client.phone_number", read_only=True)
+    client_name = serializers.CharField(source="client.full_name", read_only=True)
+    notification_channel = serializers.CharField(source="notification.channel", read_only=True)
+    advisor_name = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    response_display = serializers.CharField(
+        source="get_client_response_display", read_only=True
+    )
+
+    def get_advisor_name(self, obj):
+        if obj.advisor:
+            return obj.advisor.get_full_name() or obj.advisor.username
+        return None
+
+    class Meta:
+        model = Conversation
+        fields = [
+            "id",
+            "notification",
+            "client",
+            "client_phone",
+            "client_name",
+            "notification_channel",
+            "status",
+            "status_display",
+            "client_response",
+            "response_display",
+            "had_response",
+            "advisor",
+            "advisor_name",
+            "notes",
+            "opened_at",
+            "closed_at",
+        ]
+        read_only_fields = [
+            "id",
+            "client",
+            "notification",
+            "client_response",
+            "had_response",
+            "opened_at",
+        ]
+
+
+class ConversationUpdateSerializer(serializers.ModelSerializer):
+    """Permite al asesor actualizar estado, notas y cerrar la conversación."""
+
+    class Meta:
+        model = Conversation
+        fields = ["status", "advisor", "notes", "closed_at"]

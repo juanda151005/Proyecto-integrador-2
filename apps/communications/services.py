@@ -16,23 +16,40 @@ from .models import NotificationLog
 
 logger = logging.getLogger(__name__)
 
-# ── Plantilla de mensaje de oferta (RF15) ──────────────────────────────────
-OFFER_TEMPLATE_WHATSAPP = (
-    "🎉 *¡Hola, {name}!*\n\n"
-    "Tenemos una oferta especial para ti. Tu historial como cliente {plan} "
-    "te hace elegible para migrar a un *plan postpago* con beneficios exclusivos:\n\n"
-    "✅ Minutos ilimitados\n"
-    "✅ Datos 5G sin límite\n"
-    "✅ Sin cargos adicionales\n\n"
-    "📞 Llama al *#611* o visita nuestra página para activarlo hoy.\n"
-    "_SmartMigration — Tu operadora inteligente_"
+# ── Plantillas de mensaje por defecto (RF15) ───────────────────────────────
+# Se usan cuando el Plan del cliente no tiene plantilla configurada.
+DEFAULT_TEMPLATE_WHATSAPP = (
+    "Hola {name}, te invitamos a migrarte al {plan} por valor de ${price}. "
+    "Responde *SI* si te interesa o *NO* para declinar. SmartMigration."
 )
 
-OFFER_TEMPLATE_SMS = (
-    "Hola {name}, eres elegible para migrar a postpago. "
-    "Llama al #611 o visita smartmigration.co para conocer tu oferta personalizada. "
-    "SmartMigration."
+DEFAULT_TEMPLATE_SMS = (
+    "Hola {name}, te invitamos al {plan} por ${price}. "
+    "Responde SI o NO. SmartMigration."
 )
+
+
+def _build_offer_message(client, channel):
+    """
+    Construye el mensaje de oferta para el cliente.
+    Usa la plantilla del Plan si está configurada; si no, la plantilla por defecto.
+    """
+    plan = client.plan
+    if plan:
+        template = (
+            plan.message_template_whatsapp
+            if channel == "WHATSAPP"
+            else plan.message_template_sms
+        ) or (DEFAULT_TEMPLATE_WHATSAPP if channel == "WHATSAPP" else DEFAULT_TEMPLATE_SMS)
+        plan_name = plan.target_plan_name or plan.name
+        price = f"{plan.target_plan_price:,.0f}" if plan.target_plan_price else ""
+    else:
+        template = DEFAULT_TEMPLATE_WHATSAPP if channel == "WHATSAPP" else DEFAULT_TEMPLATE_SMS
+        plan_name = client.get_current_plan_display()
+        price = ""
+
+    first_name = client.full_name.split()[0]
+    return template.format(name=first_name, plan=plan_name, price=price)
 
 
 class TwilioService:
@@ -131,11 +148,7 @@ class TwilioService:
             dict con keys 'success' (bool), 'sid' (str) o 'error' (str),
             y 'log_id' con el ID del NotificationLog creado.
         """
-        plan_label = client.get_current_plan_display()
-        message = OFFER_TEMPLATE_WHATSAPP.format(
-            name=client.full_name.split()[0],  # primer nombre
-            plan=plan_label,
-        )
+        message = _build_offer_message(client, channel="WHATSAPP")
 
         result = self.send_whatsapp(client.phone_number, message)
 
@@ -196,9 +209,7 @@ class TwilioService:
             dict con keys 'success' (bool), 'sid' (str) o 'error' (str),
             y 'log_id' con el ID del NotificationLog creado.
         """
-        message = OFFER_TEMPLATE_SMS.format(
-            name=client.full_name.split()[0],
-        )
+        message = _build_offer_message(client, channel="SMS")
 
         result = self.send_sms(client.phone_number, message)
 
