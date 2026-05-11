@@ -8,6 +8,60 @@ phone_regex = RegexValidator(
 )
 
 
+class Plan(models.Model):
+    """
+    Plan de migración parametrizable.
+    Permite configurar: días de elegibilidad, plantillas de mensaje y precio destino.
+    """
+
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name="Código",
+        help_text="Identificador único del plan (ej: PLAN_BASICO)",
+    )
+    name = models.CharField(max_length=100, verbose_name="Nombre del plan")
+    description = models.TextField(blank=True, verbose_name="Descripción")
+    target_plan_name = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Plan postpago objetivo",
+        help_text="Nombre del plan al que se invita a migrar (ej: Plan Plus de Tigo)",
+    )
+    target_plan_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Precio del plan objetivo (COP)",
+    )
+    min_seniority_days = models.PositiveIntegerField(
+        default=60,
+        verbose_name="Días mínimos de antigüedad",
+        help_text="Al llegar al día siguiente se habilita el envío de notificación.",
+    )
+    message_template_whatsapp = models.TextField(
+        blank=True,
+        verbose_name="Plantilla WhatsApp",
+        help_text="Variables disponibles: {name}, {plan}, {price}",
+    )
+    message_template_sms = models.TextField(
+        blank=True,
+        verbose_name="Plantilla SMS",
+        help_text="Variables disponibles: {name}, {plan}, {price}",
+    )
+    is_active = models.BooleanField(default=True, verbose_name="¿Activo?")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Plan"
+        verbose_name_plural = "Planes"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
 class Client(models.Model):
     """
     Cliente prepago.
@@ -45,6 +99,15 @@ class Client(models.Model):
         choices=PlanChoices.choices,
         default=PlanChoices.PREPAGO_BASIC,
         verbose_name="Plan actual",
+    )
+    plan = models.ForeignKey(
+        Plan,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="clients",
+        verbose_name="Plan de migración objetivo",
+        help_text="Plan postpago al que se invitará a migrar al cliente",
     )
     is_eligible = models.BooleanField(
         default=False,
