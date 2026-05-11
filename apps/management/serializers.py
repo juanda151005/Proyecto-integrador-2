@@ -64,13 +64,27 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
 
 class ConversionReportSerializer(serializers.Serializer):
-    """Serializer para reportes de conversión (RF17)."""
+    """Serializer para reportes de conversión y métricas del sistema (RF17)."""
 
+    # Clientes
     total_clients = serializers.IntegerField()
+    active_clients = serializers.IntegerField(default=0)
+    inactive_clients = serializers.IntegerField(default=0)
     eligible_clients = serializers.IntegerField()
     migrated_clients = serializers.IntegerField()
     conversion_rate = serializers.FloatField()
+    average_spending_global = serializers.FloatField(default=0.0)
+
+    # Notificaciones
+    total_notifications = serializers.IntegerField(default=0)
     accepted = serializers.IntegerField()
     rejected = serializers.IntegerField()
     pending = serializers.IntegerField()
-    average_spending_global = serializers.FloatField(required=False)
+    failed = serializers.IntegerField(default=0)
+    response_rate = serializers.FloatField(default=0.0)
+
+    # Conversaciones / flujo asesor
+    open_conversations = serializers.IntegerField(default=0)
+    closed_conversations = serializers.IntegerField(default=0)
+    interested = serializers.IntegerField(default=0)
+    not_interested = serializers.IntegerField(default=0)

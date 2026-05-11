@@ -41,9 +41,14 @@
             <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN">
                 <i class="bi bi-sliders"></i> Configuración global
             </a>
-            
+            <a href="planes.html" class="nav-link-custom d-none" id="navPlanes" data-rbac-roles="ADMIN">
+                <i class="bi bi-diagram-3"></i> Planes de Migración
+            </a>
             <a href="clientes.html" class="nav-link-custom">
                 <i class="bi bi-person-lines-fill"></i> Clientes Prepago
+            </a>
+            <a href="conversaciones.html" class="nav-link-custom" id="navConversaciones">
+                <i class="bi bi-chat-dots"></i> Conversaciones
             </a>
 
             <hr style="border-color: var(--surface-border); margin: 0.5rem 0;">
@@ -76,17 +81,17 @@
                         <i class="bi bi-lightning-charge fs-4"></i>
                     </div>
                     <h5>Clientes Elegibles</h5>
-                    <h2 class="fw-bold mb-0">---</h2>
+                    <h2 class="fw-bold mb-0" id="statEligible">---</h2>
                 </div>
             </div>
-            
+
             <div class="col-md-4">
                 <div class="glass-panel p-4 h-100">
                     <div class="d-inline-flex bg-success bg-opacity-10 text-success p-3 rounded-3 mb-3">
                         <i class="bi bi-check-circle fs-4"></i>
                     </div>
                     <h5>Migraciones Exitosas</h5>
-                    <h2 class="fw-bold mb-0">---</h2>
+                    <h2 class="fw-bold mb-0" id="statMigrated">---</h2>
                 </div>
             </div>
 
@@ -96,7 +101,47 @@
                         <i class="bi bi-cash-coin fs-4"></i>
                     </div>
                     <h5>Gasto Promedio</h5>
-                    <h2 class="fw-bold mb-0">---</h2>
+                    <h2 class="fw-bold mb-0" id="statSpending">---</h2>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-success bg-opacity-10 text-success p-3 rounded-3 mb-3">
+                        <i class="bi bi-hand-thumbs-up fs-4"></i>
+                    </div>
+                    <h5 class="h6">Interesados (Sí)</h5>
+                    <h2 class="fw-bold mb-0" id="statInterested">---</h2>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-danger bg-opacity-10 text-danger p-3 rounded-3 mb-3">
+                        <i class="bi bi-hand-thumbs-down fs-4"></i>
+                    </div>
+                    <h5 class="h6">No interesados</h5>
+                    <h2 class="fw-bold mb-0" id="statNotInterested">---</h2>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-warning bg-opacity-10 text-warning p-3 rounded-3 mb-3">
+                        <i class="bi bi-chat-dots fs-4"></i>
+                    </div>
+                    <h5 class="h6">Conv. Abiertas</h5>
+                    <h2 class="fw-bold mb-0" id="statOpenConv">---</h2>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-info bg-opacity-10 text-info p-3 rounded-3 mb-3">
+                        <i class="bi bi-bar-chart-line fs-4"></i>
+                    </div>
+                    <h5 class="h6">Tasa de Respuesta</h5>
+                    <h2 class="fw-bold mb-0" id="statResponseRate">---</h2>
                 </div>
             </div>
         </div>
@@ -135,23 +180,18 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                const response = await fetchAPI('/management/reports/conversion/', { method: 'GET' });
-                
-                // Seleccionar los elementos H2 de las tarjetas usando selectores precisos
-                const eligibleEl = document.querySelector('.col-md-4:nth-child(1) h2');
-                const migratedEl = document.querySelector('.col-md-4:nth-child(2) h2');
-                const spendingEl = document.querySelector('.col-md-4:nth-child(3) h2');
-                
-                if (eligibleEl) eligibleEl.textContent = response.eligible_clients || "0";
-                if (migratedEl) migratedEl.textContent = response.migrated_clients || "0";
-                if (spendingEl) {
-                    const formated = new Intl.NumberFormat('es-CO', { 
-                        style: 'currency', 
-                        currency: 'COP',
-                        maximumFractionDigits: 0
-                    }).format(response.average_spending_global || 0);
-                    spendingEl.textContent = formated;
-                }
+                const r = await fetchAPI('/management/reports/conversion/', { method: 'GET' });
+
+                document.getElementById('statEligible').textContent = r.eligible_clients ?? '0';
+                document.getElementById('statMigrated').textContent = r.migrated_clients ?? '0';
+                document.getElementById('statSpending').textContent = new Intl.NumberFormat('es-CO', {
+                    style: 'currency', currency: 'COP', maximumFractionDigits: 0
+                }).format(r.average_spending_global || 0);
+                document.getElementById('statInterested').textContent = r.interested ?? '0';
+                document.getElementById('statNotInterested').textContent = r.not_interested ?? '0';
+                document.getElementById('statOpenConv').textContent = r.open_conversations ?? '0';
+                const rate = r.response_rate != null ? parseFloat(r.response_rate).toFixed(1) + '%' : '0%';
+                document.getElementById('statResponseRate').textContent = rate;
             } catch (error) {
                 console.error("Error cargando estadísticas del dashboard:", error);
             }

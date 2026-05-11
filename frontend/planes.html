@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planes de Migración - Smart Migration System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="d-flex align-items-center gap-2 mb-5 px-2">
+            <i class="bi bi-rocket-takeoff text-primary fs-3"></i>
+            <h4 class="mb-0 fw-bold">SmartMig</h4>
+        </div>
+        <nav class="nav flex-column gap-1">
+            <a href="dashboard.html" class="nav-link-custom"><i class="bi bi-house-door"></i> Inicio</a>
+            <a href="recargas.html" class="nav-link-custom"><i class="bi bi-cash-stack"></i> Registro de Recargas</a>
+            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers" data-rbac-roles="ADMIN"><i class="bi bi-people"></i> Gestión de Usuarios</a>
+            <a href="bitacora.html" class="nav-link-custom d-none" id="navBitacora" data-rbac-roles="ADMIN"><i class="bi bi-journal-text"></i> Bitácora de Login</a>
+            <a href="auditoria.html" class="nav-link-custom d-none" id="navAuditoria" data-rbac-roles="ADMIN"><i class="bi bi-shield-lock"></i> Auditoría crítica</a>
+            <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN"><i class="bi bi-sliders"></i> Configuración global</a>
+            <a href="planes.html" class="nav-link-custom active d-none" id="navPlanes" data-rbac-roles="ADMIN"><i class="bi bi-diagram-3"></i> Planes de Migración</a>
+            <a href="clientes.html" class="nav-link-custom"><i class="bi bi-person-lines-fill"></i> Clientes Prepago</a>
+            <a href="conversaciones.html" class="nav-link-custom" id="navConversaciones"><i class="bi bi-chat-dots"></i> Conversaciones</a>
+            <hr style="border-color: var(--surface-border); margin: 0.5rem 0;">
+            <a href="perfil.html" class="nav-link-custom"><i class="bi bi-person-circle"></i> Mi Perfil</a>
+            <a href="#" class="nav-link-custom text-danger mt-2" onclick="SecurityService.logout()"><i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión</a>
+        </nav>
+    </div>
+
+    <div class="main-content fade-in">
+        <header class="mb-4">
+            <h2 class="fw-bold">Planes de Migración</h2>
+            <p class="text-secondary mb-0">Configura los planes postpago, sus mensajes personalizados y días de elegibilidad.</p>
+        </header>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill" id="planCount">0 planes</span>
+            <button class="btn btn-primary-custom" onclick="openCreateModal()">
+                <i class="bi bi-plus-lg me-1"></i> Nuevo Plan
+            </button>
+        </div>
+
+        <div id="planCards" class="row g-4">
+            <div class="col-12 text-center text-secondary py-5">
+                <span class="spinner-border spinner-border-sm me-2"></span> Cargando planes...
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear / Editar Plan -->
+    <div class="modal fade" id="planModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content border-0" style="background: var(--bg-gradient-start);">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="modalTitle">
+                        <i class="bi bi-diagram-3 text-primary me-2"></i> Nuevo Plan
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <div id="modalAlert" class="alert d-none py-2 px-3"></div>
+                    <form id="planForm">
+                        <input type="hidden" id="planId">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label text-secondary small">Código único *</label>
+                                <input type="text" id="code" class="form-control form-control-custom" placeholder="PLAN_PLUS" required>
+                                <div class="form-text">Sin espacios, en mayúsculas. Ej: PLAN_PLUS</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-secondary small">Nombre del plan *</label>
+                                <input type="text" id="name" class="form-control form-control-custom" placeholder="Plan Plus" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-secondary small">Días mínimos de antigüedad *</label>
+                                <input type="number" id="min_seniority_days" class="form-control form-control-custom" value="60" min="1" required>
+                                <div class="form-text">Al día 61 se habilita la notificación.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-secondary small">Plan postpago objetivo</label>
+                                <input type="text" id="target_plan_name" class="form-control form-control-custom" placeholder="Plan Plus de Tigo">
+                                <div class="form-text">Nombre que aparecerá en el mensaje al cliente.</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-secondary small">Precio del plan (COP)</label>
+                                <input type="number" id="target_plan_price" class="form-control form-control-custom" placeholder="80000" min="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-secondary small">Estado</label>
+                                <select id="is_active" class="form-select form-control-custom">
+                                    <option value="true">Activo</option>
+                                    <option value="false">Inactivo</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label text-secondary small">Descripción</label>
+                                <textarea id="description" class="form-control form-control-custom" rows="2" placeholder="Descripción interna del plan..."></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label text-secondary small">
+                                    <i class="bi bi-whatsapp text-success me-1"></i> Plantilla WhatsApp
+                                </label>
+                                <textarea id="message_template_whatsapp" class="form-control form-control-custom" rows="3"
+                                    placeholder="Hola {name}, te invitamos a migrarte al {plan} por valor de ${price}. Responde SI si te interesa o NO para declinar."></textarea>
+                                <div class="form-text">Variables: <code>{name}</code> = primer nombre, <code>{plan}</code> = nombre del plan objetivo, <code>{price}</code> = precio.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label text-secondary small">
+                                    <i class="bi bi-phone text-primary me-1"></i> Plantilla SMS
+                                </label>
+                                <textarea id="message_template_sms" class="form-control form-control-custom" rows="2"
+                                    placeholder="Hola {name}, te invitamos al {plan} por ${price}. Responde SI o NO."></textarea>
+                                <div class="form-text">Mismo juego de variables. Recomendado: máx 160 caracteres.</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" id="btnSubmit" class="btn btn-primary-custom">
+                                <i class="bi bi-check-lg me-1"></i> Guardar Plan
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmar Eliminación -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content border-0" style="background: var(--bg-gradient-start);">
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-exclamation-triangle text-danger fs-1 mb-3 d-block"></i>
+                    <h6 class="fw-bold">¿Eliminar este plan?</h6>
+                    <p class="text-secondary small mb-0" id="deletePlanName"></p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pt-0">
+                    <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" id="btnConfirmDelete">
+                        <i class="bi bi-trash me-1"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        SecurityService.initPage({ requiredRoles: ['ADMIN'] });
+
+        let editingId = null;
+        let deleteId = null;
+
+        async function loadPlans() {
+            try {
+                const data = await fetchAPI('/clients/plans/');
+                const plans = data.results || data;
+                document.getElementById('planCount').textContent = `${plans.length} plan${plans.length !== 1 ? 'es' : ''}`;
+
+                if (plans.length === 0) {
+                    document.getElementById('planCards').innerHTML = `
+                        <div class="col-12 text-center text-secondary py-5">
+                            <i class="bi bi-diagram-3 fs-1 d-block mb-3"></i>
+                            No hay planes configurados. Crea el primero.
+                        </div>`;
+                    return;
+                }
+
+                document.getElementById('planCards').innerHTML = plans.map(p => `
+                    <div class="col-md-6 col-xl-4">
+                        <div class="glass-panel p-4 h-100 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1 rounded-pill small mb-1">${p.code}</span>
+                                    <h5 class="mb-0 fw-bold">${p.name}</h5>
+                                </div>
+                                <span class="badge ${p.is_active ? 'bg-success' : 'bg-secondary'} bg-opacity-20 ${p.is_active ? 'text-success' : 'text-secondary'} rounded-pill">
+                                    ${p.is_active ? 'Activo' : 'Inactivo'}
+                                </span>
+                            </div>
+                            ${p.description ? `<p class="text-secondary small mb-3">${p.description}</p>` : ''}
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <div class="bg-primary bg-opacity-10 rounded-3 p-2 text-center">
+                                        <div class="fw-bold text-primary fs-5">${p.min_seniority_days}</div>
+                                        <div class="text-secondary" style="font-size:0.7rem">días mín.</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="bg-success bg-opacity-10 rounded-3 p-2 text-center">
+                                        <div class="fw-bold text-success" style="font-size:0.85rem">
+                                            ${p.target_plan_price ? '$' + Number(p.target_plan_price).toLocaleString('es-CO') : '—'}
+                                        </div>
+                                        <div class="text-secondary" style="font-size:0.7rem">precio objetivo</div>
+                                    </div>
+                                </div>
+                            </div>
+                            ${p.target_plan_name ? `
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="bi bi-arrow-right-circle text-primary"></i>
+                                <span class="small">${p.target_plan_name}</span>
+                            </div>` : ''}
+                            ${p.message_template_whatsapp ? `
+                            <div class="bg-success bg-opacity-10 border border-success border-opacity-25 rounded-2 p-2 mb-2">
+                                <i class="bi bi-whatsapp text-success me-1"></i>
+                                <span style="font-size:0.75rem; opacity:0.85">${p.message_template_whatsapp.substring(0, 80)}${p.message_template_whatsapp.length > 80 ? '…' : ''}</span>
+                            </div>` : ''}
+                            <div class="mt-auto pt-3 d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="openEditModal(${p.id})">
+                                    <i class="bi bi-pencil me-1"></i> Editar
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete(${p.id}, '${p.name.replace(/'/g, "\\'")}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('planCards').innerHTML = '<div class="col-12 text-center text-danger py-4">Error al cargar planes.</div>';
+            }
+        }
+
+        function openCreateModal() {
+            editingId = null;
+            document.getElementById('planForm').reset();
+            document.getElementById('planId').value = '';
+            document.getElementById('is_active').value = 'true';
+            document.getElementById('modalTitle').innerHTML = '<i class="bi bi-diagram-3 text-primary me-2"></i> Nuevo Plan';
+            document.getElementById('modalAlert').classList.add('d-none');
+            document.getElementById('code').removeAttribute('readonly');
+            new bootstrap.Modal(document.getElementById('planModal')).show();
+        }
+
+        async function openEditModal(id) {
+            editingId = id;
+            document.getElementById('modalAlert').classList.add('d-none');
+            try {
+                const p = await fetchAPI(`/clients/plans/${id}/`);
+                document.getElementById('planId').value = p.id;
+                document.getElementById('code').value = p.code;
+                document.getElementById('code').setAttribute('readonly', true);
+                document.getElementById('name').value = p.name;
+                document.getElementById('description').value = p.description || '';
+                document.getElementById('target_plan_name').value = p.target_plan_name || '';
+                document.getElementById('target_plan_price').value = p.target_plan_price || '';
+                document.getElementById('min_seniority_days').value = p.min_seniority_days;
+                document.getElementById('message_template_whatsapp').value = p.message_template_whatsapp || '';
+                document.getElementById('message_template_sms').value = p.message_template_sms || '';
+                document.getElementById('is_active').value = p.is_active ? 'true' : 'false';
+                document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i> Editar Plan';
+                new bootstrap.Modal(document.getElementById('planModal')).show();
+            } catch (e) {
+                showToast('Error al cargar el plan.', 'danger');
+            }
+        }
+
+        document.getElementById('planForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmit');
+            const alert = document.getElementById('modalAlert');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
+            btn.disabled = true;
+            alert.classList.add('d-none');
+
+            const payload = {
+                code: document.getElementById('code').value.trim().toUpperCase(),
+                name: document.getElementById('name').value.trim(),
+                description: document.getElementById('description').value.trim(),
+                target_plan_name: document.getElementById('target_plan_name').value.trim(),
+                target_plan_price: document.getElementById('target_plan_price').value || 0,
+                min_seniority_days: parseInt(document.getElementById('min_seniority_days').value),
+                message_template_whatsapp: document.getElementById('message_template_whatsapp').value.trim(),
+                message_template_sms: document.getElementById('message_template_sms').value.trim(),
+                is_active: document.getElementById('is_active').value === 'true',
+            };
+
+            try {
+                if (editingId) {
+                    await fetchAPI(`/clients/plans/${editingId}/`, { method: 'PATCH', body: JSON.stringify(payload) });
+                } else {
+                    await fetchAPI('/clients/plans/', { method: 'POST', body: JSON.stringify(payload) });
+                }
+                alert.className = 'alert alert-success py-2 px-3';
+                alert.textContent = editingId ? 'Plan actualizado ✅' : 'Plan creado ✅';
+                alert.classList.remove('d-none');
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('planModal')).hide();
+                    loadPlans();
+                }, 700);
+            } catch (err) {
+                alert.className = 'alert alert-danger py-2 px-3';
+                const msgs = err.data ? Object.entries(err.data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | ') : 'Error inesperado.';
+                alert.textContent = msgs;
+                alert.classList.remove('d-none');
+            } finally {
+                btn.innerHTML = orig;
+                btn.disabled = false;
+            }
+        });
+
+        function confirmDelete(id, name) {
+            deleteId = id;
+            document.getElementById('deletePlanName').textContent = name;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+
+        document.getElementById('btnConfirmDelete').addEventListener('click', async () => {
+            if (!deleteId) return;
+            const btn = document.getElementById('btnConfirmDelete');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            btn.disabled = true;
+            try {
+                await fetchAPI(`/clients/plans/${deleteId}/`, { method: 'DELETE' });
+                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                loadPlans();
+            } catch (e) {
+                showToast('No se puede eliminar: el plan tiene clientes asignados.', 'danger');
+                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            } finally {
+                btn.innerHTML = '<i class="bi bi-trash me-1"></i> Eliminar';
+                btn.disabled = false;
+                deleteId = null;
+            }
+        });
+
+        function showToast(message, type = 'success') {
+            const t = document.createElement('div');
+            t.className = `alert alert-${type === 'danger' ? 'danger' : 'success'} position-fixed shadow-lg`;
+            t.style.cssText = 'top:20px;right:20px;z-index:9999;min-width:300px;';
+            t.innerHTML = `<i class="bi bi-${type === 'danger' ? 'exclamation-circle' : 'check-circle'} me-2"></i>${message}`;
+            document.body.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
+        }
+
+        loadPlans();
+    </script>
+</body>
+</html>

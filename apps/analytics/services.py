@@ -35,11 +35,21 @@ class EligibilityEngine:
         return get_runtime_settings()["analysis_interval_minutes"]
 
     @staticmethod
-    def get_min_seniority_days():
+    def get_min_seniority_days(client=None):
         """
-        Obtiene la antigüedad mínima en días desde BusinessRule.
-        Clave: MIN_SENIORITY_DAYS (solo ADMIN puede modificarla vía RF16).
+        Obtiene la antigüedad mínima en días.
+        Prioridad:
+          1. client.plan.min_seniority_days  (si el cliente tiene un Plan configurado)
+          2. BusinessRule MIN_SENIORITY_DAYS  (configuración global via RF16)
+          3. Valor por defecto: 60 días
         """
+        if client is not None and client.plan_id:
+            try:
+                plan = client.plan
+                if plan is not None:
+                    return plan.min_seniority_days
+            except Exception:
+                pass
         try:
             rule = BusinessRule.objects.get(key="MIN_SENIORITY_DAYS", is_active=True)
             return int(rule.value)
@@ -85,7 +95,7 @@ class EligibilityEngine:
 
         Retorna un dict con el resultado de la evaluación.
         """
-        min_seniority = cls.get_min_seniority_days()
+        min_seniority = cls.get_min_seniority_days(client=client)
         seniority_days = (date.today() - client.activation_date).days
 
         # Actualizar average_spending (RF12) aunque no sea criterio de elegibilidad

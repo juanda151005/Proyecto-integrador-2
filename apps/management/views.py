@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.communications.models import NotificationLog
+from apps.communications.models import Conversation, NotificationLog
 from apps.core_business.models import Client
 from apps.users.permissions import IsAdmin, IsAdminOrAnalyst
 
@@ -114,28 +114,71 @@ class ConversionReportView(APIView):
     permission_classes = [IsAdminOrAnalyst]
 
     def get(self, request):
+        from django.db.models import Avg, Count
+
         total = Client.objects.count()
+        active = Client.objects.filter(status=Client.StatusChoices.ACTIVE).count()
+        inactive = Client.objects.filter(status=Client.StatusChoices.INACTIVE).count()
         eligible = Client.objects.filter(is_eligible=True).count()
         migrated = Client.objects.filter(status=Client.StatusChoices.MIGRATED).count()
         conversion_rate = (migrated / total * 100) if total > 0 else 0
 
-        from django.db.models import Avg
-        avg_spending = Client.objects.aggregate(Avg('average_spending'))['average_spending__avg']
+        avg_spending = Client.objects.aggregate(Avg("average_spending"))["average_spending__avg"]
         avg_spending = float(avg_spending) if avg_spending else 0.0
 
-        accepted = NotificationLog.objects.filter(status="ACCEPTED").count()
-        rejected = NotificationLog.objects.filter(status="REJECTED").count()
-        pending = NotificationLog.objects.filter(status="SENT").count()
+        # Notificaciones
+        total_notifications = NotificationLog.objects.count()
+        accepted = NotificationLog.objects.filter(
+            status=NotificationLog.StatusChoices.ACCEPTED
+        ).count()
+        rejected = NotificationLog.objects.filter(
+            status=NotificationLog.StatusChoices.REJECTED
+        ).count()
+        pending = NotificationLog.objects.filter(
+            status=NotificationLog.StatusChoices.SENT
+        ).count()
+        failed = NotificationLog.objects.filter(
+            status=NotificationLog.StatusChoices.FAILED
+        ).count()
+
+        # Conversaciones
+        open_conversations = Conversation.objects.filter(
+            status=Conversation.StatusChoices.OPEN
+        ).count()
+        closed_conversations = Conversation.objects.filter(
+            status=Conversation.StatusChoices.CLOSED
+        ).count()
+        interested = Conversation.objects.filter(
+            client_response=Conversation.ResponseChoices.YES
+        ).count()
+        not_interested = Conversation.objects.filter(
+            client_response=Conversation.ResponseChoices.NO
+        ).count()
+
+        response_rate = (
+            round((accepted + rejected) / total_notifications * 100, 2)
+            if total_notifications > 0
+            else 0
+        )
 
         data = {
             "total_clients": total,
+            "active_clients": active,
+            "inactive_clients": inactive,
             "eligible_clients": eligible,
             "migrated_clients": migrated,
             "conversion_rate": round(conversion_rate, 2),
+            "average_spending_global": avg_spending,
+            "total_notifications": total_notifications,
             "accepted": accepted,
             "rejected": rejected,
             "pending": pending,
-            "average_spending_global": avg_spending,
+            "failed": failed,
+            "response_rate": response_rate,
+            "open_conversations": open_conversations,
+            "closed_conversations": closed_conversations,
+            "interested": interested,
+            "not_interested": not_interested,
         }
 
         serializer = ConversionReportSerializer(data)
