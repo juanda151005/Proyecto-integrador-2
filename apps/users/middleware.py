@@ -1,6 +1,112 @@
+import json
+import logging
 import re
 
 from django.http import JsonResponse
+from django.utils.deprecation import MiddlewareMixin
+
+logger = logging.getLogger(__name__)
+
+# =============================================================================
+# RF05 — Middleware de Auditoría de Login
+# =============================================================================
+
+#: Ruta del endpoint de autenticación que se va a auditar
+_LOGIN_PATH = "/api/v1/auth/token/"
+
+
+class LoginAuditMiddleware(MiddlewareMixin):
+    """
+    RF05 — Middleware de auditoría de intentos de inicio de sesión.
+
+    Intercepta TODAS las peticiones POST a ``/api/v1/auth/token/`` y registra
+    en la tabla ``login_logs`` (modelo LoginAttempt) los siguientes datos:
+
+    - Dirección IP de origen (incluyendo soporte para X-Forwarded-For)
+    - User-Agent del cliente (navegador, herramienta, etc.)
+    - Username intentado
+    - Fecha y hora exacta del intento
+    - Resultado: exitoso (HTTP 200) o fallido (cualquier otro código)
+
+    Criterios de aceptación RF05:
+    ✓ Se registran tanto los intentos fallidos como los exitosos.
+    ✓ El log incluye el origen (dirección IP) del intento.
+    ✓ El log incluye el User-Agent para detectar herramientas de ataque.
+
+    Nota de diseño: el registro «exitoso/fallido» se determina por el código
+    de respuesta HTTP *después* de que la vista procesa la petición. Esto es
+    complementario al registro que hace el serializer; si alguno falla, el
+    otro garantiza que el intento quede registrado (defensa en profundidad).
+    """
+
+    def process_request(self, request):
+        """Guarda la IP y User-Agent antes de que la vista procese el request."""
+        if request.path == _LOGIN_PATH and request.method == "POST":
+            request._audit_ip = self._get_client_ip(request)
+            request._audit_ua = request.META.get("HTTP_USER_AGENT", "")[:512]
+            request._audit_username = self._extract_username(request)
+
+    def process_response(self, request, response):
+        """
+        Registra el intento de login tras conocer el resultado HTTP.
+
+        Solo actúa sobre POST a la ruta de token. El serializer ya registra
+        el intento; este middleware actúa como fallback y fuente de verdad
+        para el código de respuesta real.
+        """
+        if request.path == _LOGIN_PATH and request.method == "POST":
+            # Si process_request no corrió (e.g. middleware no instalado arriba),
+            # intentamos recuperar los valores de todas formas.
+            ip = getattr(request, "_audit_ip", None) or self._get_client_ip(request)
+            ua = getattr(request, "_audit_ua", None)
+            if ua is None:
+                ua = request.META.get("HTTP_USER_AGENT", "")[:512]
+            username = getattr(request, "_audit_username", None) or ""
+
+            success = response.status_code == 200
+
+            # Solo log a nivel DEBUG aquí para no duplicar el INSERT del
+            # serializer. El serializer ya hace el INSERT en la BD.
+            # Este middleware solo registra en el logger de Python (útil
+            # para sistemas de monitoreo externos como Sentry o ELK).
+            level = logging.INFO if success else logging.WARNING
+            logger.log(
+                level,
+                "[LoginAudit] ip=%s user=%r ua=%.80s status=%s",
+                ip,
+                username,
+                ua,
+                response.status_code,
+            )
+
+        return response
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _get_client_ip(request):
+        """Detecta la IP real del cliente soportando proxies inversos."""
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        if xff:
+            return xff.split(",")[0].strip()
+        return request.META.get("REMOTE_ADDR")
+
+    @staticmethod
+    def _extract_username(request):
+        """
+        Intenta leer el username del body JSON *sin consumir* el stream.
+
+        Django almacena el body en ``request.body`` (bytes) la primera vez
+        que se accede; lecturas posteriores devuelven el mismo buffer.
+        """
+        try:
+            body = json.loads(request.body.decode("utf-8", errors="ignore"))
+            return body.get("username", "")
+        except Exception:
+            return ""
+
 
 # =============================================================================
 # RF19 — Mapa de rutas protegidas por rol

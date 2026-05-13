@@ -77,14 +77,28 @@ class CustomUserAdmin(UserAdmin):
 class LoginAttemptAdmin(admin.ModelAdmin):
     """Admin para bitácora de login (RF05)."""
 
-    list_display = ["username_attempted", "ip_address", "was_successful", "timestamp"]
-    list_filter = ["was_successful", "timestamp"]
-    search_fields = ["username_attempted", "ip_address"]
-    readonly_fields = [
-        "user",
+    list_display = [
         "username_attempted",
         "ip_address",
         "was_successful",
         "timestamp",
+        "user_agent_short",
+    ]
+    list_filter = ["was_successful", "timestamp"]
+    search_fields = ["username_attempted", "ip_address", "user_agent"]
+    readonly_fields = [
+        "user",
+        "username_attempted",
+        "ip_address",
+        "user_agent",
+        "was_successful",
+        "timestamp",
     ]
     date_hierarchy = "timestamp"
+
+    @admin.display(description="User-Agent")
+    def user_agent_short(self, obj):
+        """Muestra los primeros 60 caracteres del user-agent para la lista."""
+        return (obj.user_agent or "")[:60] + (
+            "..." if len(obj.user_agent or "") > 60 else ""
+        )

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import CustomUser, LoginAttempt
-from .services import create_user, get_client_ip, log_login_attempt
+from .services import create_user, get_client_ip, get_user_agent, log_login_attempt
 
 # =============================================================================
 # RF01 — Gestión de Usuarios y Roles
@@ -123,16 +123,21 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         """Valida credenciales y registra el intento de login via services."""
         request = self.context.get("request")
         ip_address = get_client_ip(request) if request else None
+        user_agent = get_user_agent(request) if request else ""
         username = attrs.get("username", "")
 
         try:
             data = super().validate(attrs)
         except Exception as e:
-            log_login_attempt(username, ip_address, success=False)
+            log_login_attempt(
+                username, ip_address, success=False, user_agent=user_agent
+            )
             raise e
 
         user = self.user
-        log_login_attempt(username, ip_address, success=True, user=user)
+        log_login_attempt(
+            username, ip_address, success=True, user=user, user_agent=user_agent
+        )
 
         data["user"] = {
             "id": user.id,
@@ -236,6 +241,7 @@ class LoginAttemptSerializer(serializers.ModelSerializer):
             "user",
             "username_attempted",
             "ip_address",
+            "user_agent",
             "was_successful",
             "timestamp",
         ]

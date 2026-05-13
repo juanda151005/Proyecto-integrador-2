@@ -21,26 +21,33 @@ def create_user(validated_data):
     return user
 
 
-def log_login_attempt(username, ip_address, success, user=None):
+def log_login_attempt(username, ip_address, success, user=None, user_agent=""):
     """
     RF02/RF05 — Registra un intento de inicio de sesión en la bitácora.
 
+    Captura: IP de origen, user-agent, fecha/hora y resultado del intento.
     Se llama automáticamente en cada intento de login (exitoso o fallido).
     """
     return LoginAttempt.objects.create(
         user=user,
         username_attempted=username,
         ip_address=ip_address,
+        user_agent=user_agent or "",
         was_successful=success,
     )
 
 
 def get_client_ip(request):
-    """Obtiene la IP real del cliente desde el request."""
+    """Obtiene la IP real del cliente desde el request (soporta proxies con X-Forwarded-For)."""
     x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
     if x_forwarded_for:
         return x_forwarded_for.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR")
+
+
+def get_user_agent(request):
+    """Obtiene el User-Agent del cliente desde el request."""
+    return request.META.get("HTTP_USER_AGENT", "")[:512]
 
 
 # =============================================================================

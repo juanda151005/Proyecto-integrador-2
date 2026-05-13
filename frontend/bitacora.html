@@ -3,132 +3,527 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitácora de Login - Smart Migration System</title>
+    <title>Bitácora de Accesos — Smart Migration System</title>
+    <meta name="description" content="RF05: Registro de auditoría de intentos de acceso al sistema. Detecta ataques de fuerza bruta e intentos no autorizados.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        :root {
+            --audit-danger: #ff3b5c;
+            --audit-success: #00e5a0;
+            --audit-warning: #ffb830;
+            --audit-info: #4f8ef7;
+            --audit-surface: rgba(255,255,255,0.04);
+            --audit-border: rgba(255,255,255,0.08);
+        }
+
+        body { font-family: 'Space Grotesk', sans-serif; }
+
+        /* ── Stats Cards ── */
+        .stat-card {
+            background: var(--audit-surface);
+            border: 1px solid var(--audit-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            border-radius: 16px 16px 0 0;
+        }
+        .stat-card.total::before  { background: var(--audit-info); }
+        .stat-card.failed::before { background: var(--audit-danger); }
+        .stat-card.success::before{ background: var(--audit-success); }
+        .stat-card.alert::before  { background: var(--audit-warning); }
+
+        .stat-number {
+            font-size: 2.4rem;
+            font-weight: 700;
+            line-height: 1;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .stat-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.6; margin-top: 0.3rem; }
+        .stat-icon  { font-size: 1.8rem; opacity: 0.15; position: absolute; right: 1.5rem; top: 1.5rem; }
+
+        /* ── Alert Banner ── */
+        .brute-force-banner {
+            background: linear-gradient(135deg, rgba(255,59,92,0.15), rgba(255,59,92,0.05));
+            border: 1px solid rgba(255,59,92,0.4);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: none;
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0%,100% { border-color: rgba(255,59,92,0.4); }
+            50%      { border-color: rgba(255,59,92,0.9); }
+        }
+        .brute-force-banner.visible { display: flex; }
+
+        /* ── Filters bar ── */
+        .filter-bar {
+            background: var(--audit-surface);
+            border: 1px solid var(--audit-border);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            gap: 0.75rem;
+        }
+        .filter-bar .form-control,
+        .filter-bar .form-select {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--audit-border);
+            color: inherit;
+            border-radius: 8px;
+            font-size: 0.875rem;
+        }
+        .filter-bar .form-control:focus,
+        .filter-bar .form-select:focus {
+            border-color: var(--audit-info);
+            box-shadow: 0 0 0 3px rgba(79,142,247,0.15);
+            background: rgba(79,142,247,0.06);
+            color: inherit;
+        }
+        .filter-bar .form-select option { background: #1a1f2e; color: #e2e8f0; }
+
+        /* ── Table ── */
+        .audit-table { font-size: 0.875rem; }
+        .audit-table thead th {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.5;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--audit-border);
+        }
+        .audit-table tbody tr {
+            border-bottom: 1px solid var(--audit-border);
+            transition: background 0.15s;
+        }
+        .audit-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+        .audit-table tbody tr.row-failed { border-left: 3px solid var(--audit-danger); }
+        .audit-table tbody tr.row-success{ border-left: 3px solid var(--audit-success); }
+        .audit-table td { padding: 0.85rem 1rem; vertical-align: middle; }
+
+        /* Badges */
+        .badge-success {
+            background: rgba(0,229,160,0.15);
+            color: var(--audit-success);
+            border: 1px solid rgba(0,229,160,0.3);
+            font-size: 0.72rem; padding: 0.3em 0.7em; border-radius: 20px;
+            font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+        }
+        .badge-danger {
+            background: rgba(255,59,92,0.15);
+            color: var(--audit-danger);
+            border: 1px solid rgba(255,59,92,0.3);
+            font-size: 0.72rem; padding: 0.3em 0.7em; border-radius: 20px;
+            font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+        }
+
+        /* IP chip */
+        .ip-chip {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            background: rgba(79,142,247,0.1);
+            border: 1px solid rgba(79,142,247,0.2);
+            color: var(--audit-info);
+            padding: 0.2em 0.6em;
+            border-radius: 6px;
+            display: inline-flex; align-items: center; gap: 0.3em;
+        }
+        .ip-chip.suspicious {
+            background: rgba(255,184,48,0.12);
+            border-color: rgba(255,184,48,0.35);
+            color: var(--audit-warning);
+        }
+
+        /* UA tooltip */
+        .ua-text {
+            font-size: 0.75rem; opacity: 0.55;
+            max-width: 280px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: help;
+        }
+
+        /* Username */
+        .username-cell { font-weight: 600; color: #e2e8f0; }
+
+        /* Timestamp */
+        .ts-date { font-size: 0.8rem; opacity: 0.9; }
+        .ts-time { font-size: 0.75rem; opacity: 0.45; font-family: 'JetBrains Mono', monospace; }
+
+        /* Pagination */
+        .pagination-info { font-size: 0.8rem; opacity: 0.5; }
+        .btn-page {
+            background: var(--audit-surface);
+            border: 1px solid var(--audit-border);
+            color: inherit; border-radius: 8px;
+            padding: 0.4rem 0.85rem; font-size: 0.85rem;
+            transition: all 0.15s; cursor: pointer;
+        }
+        .btn-page:hover:not(:disabled) { border-color: var(--audit-info); color: var(--audit-info); }
+        .btn-page:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* Section header */
+        .section-title {
+            font-size: 1.05rem; font-weight: 700;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .section-title .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--audit-info);
+            animation: blink 2s infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* Empty / loading states */
+        .state-msg { text-align: center; padding: 3rem; opacity: 0.4; font-size: 0.9rem; }
+
+        /* Refresh btn */
+        #btnRefresh { transition: transform 0.3s; }
+        #btnRefresh.spinning { transform: rotate(360deg); }
+    </style>
 </head>
 <body>
 
-    <!-- Sidebar Layout -->
-    <div class="sidebar">
-        <div class="d-flex align-items-center gap-2 mb-5 px-2">
-            <i class="bi bi-rocket-takeoff text-primary fs-3"></i>
-            <h4 class="mb-0 fw-bold">SmartMig</h4>
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="d-flex align-items-center gap-2 mb-5 px-2">
+        <i class="bi bi-rocket-takeoff text-primary fs-3"></i>
+        <h4 class="mb-0 fw-bold">SmartMig</h4>
+    </div>
+    <nav class="nav flex-column gap-1">
+        <a href="dashboard.html"  class="nav-link-custom"><i class="bi bi-house-door"></i> Inicio</a>
+        <a href="recargas.html"   class="nav-link-custom" id="navRecargas"><i class="bi bi-cash-stack"></i> Registro de Recargas</a>
+        <a href="usuarios.html"   class="nav-link-custom d-none" id="navUsers"    data-rbac-roles="ADMIN"><i class="bi bi-people"></i> Gestión de Usuarios</a>
+        <a href="bitacora.html"   class="nav-link-custom active d-none" id="navBitacora" data-rbac-roles="ADMIN"><i class="bi bi-journal-text"></i> Bitácora de Login</a>
+        <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN"><i class="bi bi-sliders"></i> Configuración global</a>
+        <a href="clientes.html"   class="nav-link-custom"><i class="bi bi-person-lines-fill"></i> Clientes Prepago</a>
+        <hr style="border-color:var(--surface-border);margin:.5rem 0">
+        <a href="perfil.html"     class="nav-link-custom"><i class="bi bi-person-circle"></i> Mi Perfil</a>
+        <a href="#" class="nav-link-custom text-danger mt-2" onclick="SecurityService.logout()">
+            <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
+        </a>
+    </nav>
+</div>
+
+<!-- Main Content -->
+<div class="main-content fade-in">
+
+    <!-- Page Header -->
+    <header class="mb-4 d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <h1 class="fw-bold fs-4 mb-1">Bitácora de Accesos</h1>
+            <p class="text-secondary mb-0" style="font-size:.9rem">
+                RF05 — Auditoría completa de intentos de autenticación. Detecta accesos no autorizados y ataques de fuerza bruta.
+            </p>
         </div>
+        <button id="btnRefresh" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2" onclick="refresh()">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+    </header>
 
-                <nav class="nav flex-column gap-1">
-            <a href="dashboard.html" class="nav-link-custom">
-                <i class="bi bi-house-door"></i> Inicio
-            </a>
-            
-            <a href="recargas.html" class="nav-link-custom" id="navRecargas">
-                <i class="bi bi-cash-stack"></i> Registro de Recargas
-            </a>
-            
-            <a href="usuarios.html" class="nav-link-custom d-none" id="navUsers" data-rbac-roles="ADMIN">
-                <i class="bi bi-people"></i> Gestión de Usuarios
-            </a>
-            
-            <a href="bitacora.html" class="nav-link-custom active d-none" id="navBitacora" data-rbac-roles="ADMIN">
-                <i class="bi bi-journal-text"></i> Bitácora de Login
-            </a>
-            
-            <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN">
-                <i class="bi bi-sliders"></i> Configuración global
-            </a>
-            
-            <a href="clientes.html" class="nav-link-custom">
-                <i class="bi bi-person-lines-fill"></i> Clientes Prepago
-            </a>
-
-            <hr style="border-color: var(--surface-border); margin: 0.5rem 0;">
-
-            <a href="perfil.html" class="nav-link-custom">
-                <i class="bi bi-person-circle"></i> Mi Perfil
-            </a>
-            <a href="#" class="nav-link-custom text-danger mt-2" onclick="SecurityService.logout()">
-                <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
-            </a>
-        </nav>
+    <!-- Brute-Force Alert Banner -->
+    <div class="brute-force-banner align-items-center gap-3 mb-4" id="bruteForceBanner">
+        <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+        <div class="flex-grow-1">
+            <strong class="text-danger" style="font-size:.9rem">⚠ Posible ataque de fuerza bruta detectado</strong>
+            <p class="mb-0 text-secondary" style="font-size:.8rem" id="bruteForceDetail">
+                Se detectaron múltiples intentos fallidos desde la misma IP en los últimos minutos.
+            </p>
+        </div>
+        <button class="btn btn-sm btn-outline-danger" onclick="document.getElementById('bruteForceBanner').classList.remove('visible')">
+            Descartar
+        </button>
     </div>
 
-    <!-- Main Content -->
-    <div class="main-content fade-in">
-        <header class="mb-4">
-            <h2 class="fw-bold">Bitácora de Inicios de Sesión</h2>
-            <p class="text-secondary mb-0">RF05: Registro de todos los intentos de acceso al sistema (Exitosos y Fallidos).</p>
-        </header>
-
-        <div class="glass-panel p-4">
-            <h5 class="mb-4 d-flex align-items-center gap-2">
-                <i class="bi bi-journal-text text-primary"></i> Historial de Accesos
-            </h5>
-            
-            <div class="table-responsive">
-                <table class="table table-borderless table-custom">
-                    <thead>
-                        <tr>
-                            <th>Fecha y Hora</th>
-                            <th>Usuario Intentado</th>
-                            <th>Dirección IP</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="bitacoraTableBody">
-                        <tr>
-                            <td colspan="4" class="text-center text-secondary py-4">Cargando bitácora...</td>
-                        </tr>
-                    </tbody>
-                </table>
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4" id="statsRow">
+        <div class="col-6 col-md-3">
+            <div class="stat-card total">
+                <i class="bi bi-journal-text stat-icon"></i>
+                <div class="stat-number" style="color:var(--audit-info)" id="statTotal">—</div>
+                <div class="stat-label">Total registros</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card failed">
+                <i class="bi bi-x-circle stat-icon"></i>
+                <div class="stat-number" style="color:var(--audit-danger)" id="statFailed">—</div>
+                <div class="stat-label">Intentos fallidos</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card success">
+                <i class="bi bi-check-circle stat-icon"></i>
+                <div class="stat-number" style="color:var(--audit-success)" id="statSuccess">—</div>
+                <div class="stat-label">Accesos exitosos</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card alert">
+                <i class="bi bi-shield-exclamation stat-icon"></i>
+                <div class="stat-number" style="color:var(--audit-warning)" id="statSuspicious">—</div>
+                <div class="stat-label">IPs sospechosas</div>
             </div>
         </div>
     </div>
 
-    <script src="js/api.js"></script>
-    <script>
-        // ── Protección de ruta e inicialización RBAC ──
-        SecurityService.initPage();
+    <!-- Filters -->
+    <div class="filter-bar d-flex flex-wrap align-items-center mb-3" id="filterBar">
+        <div class="flex-grow-1" style="min-width:180px">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-transparent border-end-0" style="border-color:var(--audit-border)">
+                    <i class="bi bi-search opacity-50"></i>
+                </span>
+                <input type="text" id="filterSearch" class="form-control border-start-0"
+                       placeholder="Buscar usuario o IP..." oninput="applyFilters()">
+            </div>
+        </div>
+        <select id="filterStatus" class="form-select form-select-sm" style="max-width:150px" onchange="applyFilters()">
+            <option value="">Todos los estados</option>
+            <option value="success">✓ Exitosos</option>
+            <option value="failed">✗ Fallidos</option>
+        </select>
+        <select id="filterTime" class="form-select form-select-sm" style="max-width:160px" onchange="applyFilters()">
+            <option value="0">Todo el tiempo</option>
+            <option value="1">Última hora</option>
+            <option value="24">Últimas 24h</option>
+            <option value="168">Última semana</option>
+        </select>
+        <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
+            <i class="bi bi-x-lg"></i> Limpiar
+        </button>
+    </div>
 
-        // RF19: Guard — Solo ADMIN puede ver la bitácora (protegido por initPage)
-        if (!SecurityService.initPage()) {
-            // El script redirigirá automáticamente si no hay permisos
+    <!-- Table Panel -->
+    <div class="glass-panel p-0" style="border-radius:16px; overflow:hidden">
+        <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--audit-border)">
+            <div class="section-title">
+                <span class="dot"></span>
+                Historial de Accesos
+            </div>
+            <span class="pagination-info" id="paginationInfo">Cargando...</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-borderless audit-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Fecha / Hora</th>
+                        <th>Usuario intentado</th>
+                        <th>IP de origen</th>
+                        <th>Estado</th>
+                        <th>User-Agent</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                    <tr><td colspan="5" class="state-msg"><i class="bi bi-hourglass-split me-2"></i>Cargando bitácora...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top:1px solid var(--audit-border)">
+            <button class="btn-page" id="btnPrev" onclick="goPage(-1)" disabled>
+                <i class="bi bi-chevron-left"></i> Anterior
+            </button>
+            <span class="pagination-info" id="pageLabel">—</span>
+            <button class="btn-page" id="btnNext" onclick="goPage(1)" disabled>
+                Siguiente <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+// ── Auth guard ──────────────────────────────────────────────────────────────
+SecurityService.initPage();
+
+// ── State ───────────────────────────────────────────────────────────────────
+let allAttempts  = [];   // todos los registros cargados
+let filtered     = [];   // después de aplicar filtros
+let currentPage  = 1;
+const PAGE_SIZE  = 25;
+const BRUTE_THRESHOLD = 5;   // intentos fallidos desde la misma IP = sospechoso
+
+// ── Load ────────────────────────────────────────────────────────────────────
+async function loadBitacora() {
+    const tbody = document.getElementById('auditTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="state-msg"><i class="bi bi-hourglass-split me-2"></i>Cargando...</td></tr>';
+
+    try {
+        // Obtiene la primera página del API y luego todas las demás si hay paginación
+        let url = '/users/login-attempts/?page_size=500';
+        let data = await fetchAPI(url);
+        allAttempts = data.results ?? data;
+
+        // Si hay paginación y más páginas, seguir cargando
+        while (data.next) {
+            data = await fetchAPI(data.next.replace(/.*\/api\/v1/, ''));
+            allAttempts = allAttempts.concat(data.results ?? []);
         }
 
-        const loadBitacora = async () => {
-            const tbody = document.getElementById('bitacoraTableBody');
-            try {
-                // Llama al endpoint de RF05 protegido por el token JWT y RBAC
-                const data = await fetchAPI('/users/login-attempts/');
-                
-                // DRF Pagination devuelve la lista dentro de "results"
-                const attempts = data.results || data; 
+        computeStats();
+        applyFilters();
+    } catch (err) {
+        console.error('Error cargando bitácora:', err);
+        tbody.innerHTML = '<tr><td colspan="5" class="state-msg text-danger"><i class="bi bi-wifi-off me-2"></i>Error al cargar los datos. Verifica tu conexión.</td></tr>';
+    }
+}
 
-                if (attempts.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-secondary py-4">No hay registros de login en la base de datos</td></tr>';
-                    return;
-                }
+// ── Statistics ───────────────────────────────────────────────────────────────
+function computeStats() {
+    const total   = allAttempts.length;
+    const failed  = allAttempts.filter(a => !a.was_successful).length;
+    const success = allAttempts.filter(a => a.was_successful).length;
 
-                tbody.innerHTML = attempts.map(attempt => `
-                    <tr>
-                        <td class="text-secondary">${new Date(attempt.timestamp).toLocaleString()}</td>
-                        <td class="fw-medium text-primary">${attempt.username_attempted}</td>
-                        <td class="text-secondary"><i class="bi bi-globe me-1"></i> ${attempt.ip_address || 'Desconocida'}</td>
-                        <td>
-                            ${attempt.was_successful 
-                                ? '<span class="badge bg-success bg-opacity-75 px-3 py-2"><i class="bi bi-check-circle me-1"></i>Exitoso</span>' 
-                                : '<span class="badge bg-danger bg-opacity-75 px-3 py-2"><i class="bi bi-x-circle me-1"></i>Fallido</span>'}
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error("Error al cargar bitácora:", error);
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-4">Error cargando los datos. Verifica tu conexión.</td></tr>';
-            }
-        };
+    // IPs con ≥ BRUTE_THRESHOLD intentos fallidos
+    const ipFails = {};
+    allAttempts.filter(a => !a.was_successful).forEach(a => {
+        if (a.ip_address) ipFails[a.ip_address] = (ipFails[a.ip_address] || 0) + 1;
+    });
+    const suspiciousIPs = Object.entries(ipFails).filter(([,c]) => c >= BRUTE_THRESHOLD);
 
-        // Cargar los datos a la tabla
-        loadBitacora();
-    </script>
+    document.getElementById('statTotal').textContent     = total;
+    document.getElementById('statFailed').textContent    = failed;
+    document.getElementById('statSuccess').textContent   = success;
+    document.getElementById('statSuspicious').textContent= suspiciousIPs.length;
+
+    // Brute-force banner
+    if (suspiciousIPs.length > 0) {
+        const top = suspiciousIPs.sort((a,b) => b[1]-a[1])[0];
+        document.getElementById('bruteForceDetail').textContent =
+            `IP ${top[0]} realizó ${top[1]} intentos fallidos consecutivos. Revise el historial para más detalles.`;
+        document.getElementById('bruteForceBanner').classList.add('visible');
+    }
+}
+
+// ── Filters ─────────────────────────────────────────────────────────────────
+function applyFilters() {
+    const q      = document.getElementById('filterSearch').value.toLowerCase().trim();
+    const status = document.getElementById('filterStatus').value;
+    const hours  = parseInt(document.getElementById('filterTime').value) || 0;
+    const cutoff = hours ? new Date(Date.now() - hours * 3600 * 1000) : null;
+
+    filtered = allAttempts.filter(a => {
+        if (q && !a.username_attempted?.toLowerCase().includes(q) && !(a.ip_address || '').includes(q)) return false;
+        if (status === 'success' && !a.was_successful) return false;
+        if (status === 'failed'  &&  a.was_successful) return false;
+        if (cutoff && new Date(a.timestamp) < cutoff) return false;
+        return true;
+    });
+
+    currentPage = 1;
+    renderTable();
+}
+
+function clearFilters() {
+    document.getElementById('filterSearch').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterTime').value   = '0';
+    applyFilters();
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function renderTable() {
+    const tbody = document.getElementById('auditTableBody');
+    const total = filtered.length;
+    const pages = Math.ceil(total / PAGE_SIZE) || 1;
+    if (currentPage > pages) currentPage = pages;
+
+    document.getElementById('paginationInfo').textContent =
+        `${total} registro${total !== 1 ? 's' : ''} encontrado${total !== 1 ? 's' : ''}`;
+    document.getElementById('pageLabel').textContent =
+        `Página ${currentPage} de ${pages}`;
+    document.getElementById('btnPrev').disabled = currentPage <= 1;
+    document.getElementById('btnNext').disabled = currentPage >= pages;
+
+    if (total === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="state-msg"><i class="bi bi-inbox me-2"></i>No hay registros que coincidan con los filtros.</td></tr>';
+        return;
+    }
+
+    // Contar fallos por IP para marcar sospechosas
+    const ipFails = {};
+    allAttempts.filter(a => !a.was_successful).forEach(a => {
+        if (a.ip_address) ipFails[a.ip_address] = (ipFails[a.ip_address] || 0) + 1;
+    });
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const slice = filtered.slice(start, start + PAGE_SIZE);
+
+    tbody.innerHTML = slice.map(a => {
+        const ts    = new Date(a.timestamp);
+        const date  = ts.toLocaleDateString('es-CO', {day:'2-digit', month:'short', year:'numeric'});
+        const time  = ts.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        const suspicious = (ipFails[a.ip_address] || 0) >= BRUTE_THRESHOLD;
+        const ua    = (a.user_agent || 'Desconocido');
+
+        return `
+        <tr class="${a.was_successful ? 'row-success' : 'row-failed'}">
+            <td>
+                <div class="ts-date">${date}</div>
+                <div class="ts-time">${time}</div>
+            </td>
+            <td class="username-cell">
+                <i class="bi bi-person-fill me-1 opacity-50"></i>${escapeHtml(a.username_attempted)}
+            </td>
+            <td>
+                <span class="ip-chip ${suspicious ? 'suspicious' : ''}">
+                    <i class="bi bi-${suspicious ? 'exclamation-triangle' : 'globe2'}"></i>
+                    ${escapeHtml(a.ip_address || 'Desconocida')}
+                </span>
+                ${suspicious ? '<br><small style="color:var(--audit-warning);font-size:.7rem">⚠ IP sospechosa</small>' : ''}
+            </td>
+            <td>
+                ${a.was_successful
+                    ? '<span class="badge-success"><i class="bi bi-check-circle me-1"></i>Exitoso</span>'
+                    : '<span class="badge-danger"><i class="bi bi-x-circle me-1"></i>Fallido</span>'}
+            </td>
+            <td>
+                <div class="ua-text" title="${escapeHtml(ua)}">${escapeHtml(ua)}</div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ── Pagination ───────────────────────────────────────────────────────────────
+function goPage(delta) {
+    currentPage += delta;
+    renderTable();
+    document.querySelector('.main-content').scrollTo({top: 0, behavior: 'smooth'});
+}
+
+// ── Refresh ──────────────────────────────────────────────────────────────────
+function refresh() {
+    const btn = document.getElementById('btnRefresh');
+    btn.querySelector('i').classList.add('spinning');
+    loadBitacora().finally(() => {
+        setTimeout(() => btn.querySelector('i').classList.remove('spinning'), 600);
+    });
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadBitacora();
+</script>
 </body>
 </html>

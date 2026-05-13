@@ -61,6 +61,8 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    # RF05 — Auditoría de intentos de login (IP, User-Agent, timestamp, resultado)
+    "apps.users.middleware.LoginAuditMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "apps.users.middleware.RBACMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

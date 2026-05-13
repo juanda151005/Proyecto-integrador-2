@@ -77,6 +77,14 @@ class LoginAttempt(models.Model):
     """
     RF05 — Bitácora de intentos de inicio de sesión.
     También utilizado por RF02 para registrar cada intento de autenticación.
+
+    Campos de auditoría:
+    - user: referencia al usuario si el intento fue exitoso.
+    - username_attempted: username que se usó en el intento (útil en fallidos).
+    - ip_address: dirección IP de origen (detecta ataques de fuerza bruta).
+    - user_agent: agente de usuario HTTP (navegador/herramienta del atacante).
+    - was_successful: True si las credenciales fueron válidas.
+    - timestamp: fecha y hora exacta del intento.
     """
 
     user = models.ForeignKey(
@@ -93,6 +101,13 @@ class LoginAttempt(models.Model):
     ip_address = models.GenericIPAddressField(
         null=True, blank=True, verbose_name="Dirección IP"
     )
+    user_agent = models.CharField(
+        max_length=512,
+        blank=True,
+        default="",
+        verbose_name="User-Agent",
+        help_text="Agente de usuario del cliente (navegador o herramienta).",
+    )
     was_successful = models.BooleanField(default=False, verbose_name="¿Exitoso?")
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Fecha/Hora")
 
@@ -100,6 +115,14 @@ class LoginAttempt(models.Model):
         verbose_name = "Intento de inicio de sesión"
         verbose_name_plural = "Intentos de inicio de sesión"
         ordering = ["-timestamp"]
+        indexes = [
+            # Índice para consultas de brute-force por IP
+            models.Index(fields=["ip_address", "-timestamp"], name="idx_login_ip_ts"),
+            # Índice para filtrar por resultado
+            models.Index(
+                fields=["was_successful", "-timestamp"], name="idx_login_success_ts"
+            ),
+        ]
 
     def __str__(self):
         status = "✓" if self.was_successful else "✗"
