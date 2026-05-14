@@ -71,11 +71,21 @@ class EligibilityResultSerializer(serializers.Serializer):
 
 
 class ClientChangeLogSerializer(serializers.ModelSerializer):
-    """Serializer para historial de cambios del cliente (RF18)."""
+    """
+    Serializer para historial de cambios del cliente (RF18).
+
+    Campos adicionales:
+    - changed_by_username: nombre de usuario legible (null si fue automático).
+    - source_label: etiqueta de origen para la UI del analista.
+      Muestra el username si fue manual, o "Sistema (automático)" si changed_by es null.
+    """
 
     changed_by_username = serializers.CharField(
-        source="changed_by.username", read_only=True
+        source="changed_by.username",
+        read_only=True,
+        default=None,
     )
+    source_label = serializers.SerializerMethodField()
 
     class Meta:
         model = ClientChangeLog
@@ -87,9 +97,20 @@ class ClientChangeLogSerializer(serializers.ModelSerializer):
             "new_value",
             "changed_by",
             "changed_by_username",
+            "source_label",
             "changed_at",
         ]
         read_only_fields = ["id", "changed_at"]
+
+    def get_source_label(self, obj) -> str:
+        """
+        Retorna una etiqueta de origen legible para el analista:
+        - Si el cambio fue manual:      "jvelasquez (manual)"
+        - Si el cambio fue automático:  "Sistema (automático)"
+        """
+        if obj.changed_by:
+            return f"{obj.changed_by.username} (manual)"
+        return "Sistema (automático)"
 
 
 class AverageSpendingSerializer(serializers.Serializer):
