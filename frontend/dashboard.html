@@ -92,7 +92,7 @@
                     <div class="d-inline-flex bg-success bg-opacity-10 text-success p-3 rounded-3 mb-3">
                         <i class="bi bi-check-circle fs-4"></i>
                     </div>
-                    <h6 class="text-secondary mb-2 lh-sm">Ya pasaron a postpago</h6>
+                    <h5>Migraciones Exitosas</h5>
                     <h2 class="fw-bold mb-0" id="statMigrated">---</h2>
                 </div>
             </div>
@@ -251,6 +251,9 @@
                 document.getElementById('statOpenConv').textContent = r.open_conversations ?? '0';
                 document.getElementById('statClosedConv').textContent = r.closed_conversations ?? '0';
                 document.getElementById('statFailedNotif').textContent = r.failed ?? '0';
+                document.getElementById('statInterested').textContent = r.interested ?? '0';
+                document.getElementById('statNotInterested').textContent = r.not_interested ?? '0';
+                document.getElementById('statOpenConv').textContent = r.open_conversations ?? '0';
                 const rate = r.response_rate != null ? parseFloat(r.response_rate).toFixed(1) + '%' : '0%';
                 document.getElementById('statResponseRate').textContent = rate;
             } catch (error) {
