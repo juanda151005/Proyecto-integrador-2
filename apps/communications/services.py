@@ -8,35 +8,54 @@ import logging
 from django.conf import settings
 from django.utils import timezone
 
+from apps.management.audit import log_critical_action
+from apps.management.models import AuditLog
 from apps.management.runtime_settings import get_runtime_settings
 
 from .models import NotificationLog
 
 logger = logging.getLogger(__name__)
 
-# ── Plantilla de mensaje de oferta (RF15) ──────────────────────────────────
-OFFER_TEMPLATE_WHATSAPP = (
-    "🎉 *¡Hola, {name}!*\n\n"
-    "Tenemos una oferta especial para ti. Tu historial como cliente {plan} "
-    "te hace elegible para migrar a un *plan postpago* con beneficios exclusivos:\n\n"
-    "✅ Minutos ilimitados\n"
-    "✅ Datos 5G sin límite\n"
-    "✅ Sin cargos adicionales\n\n"
-    "📞 Llama al *#611* o visita nuestra página para activarlo hoy.\n"
-    "_SmartMigration — Tu operadora inteligente_"
+# ── Plantillas de mensaje por defecto (RF15) ───────────────────────────────
+# Se usan cuando el Plan del cliente no tiene plantilla configurada.
+DEFAULT_TEMPLATE_WHATSAPP = (
+    "Hola {name}, te invitamos a migrarte al {plan} por valor de ${price}. "
+    "Responde *SI* si te interesa o *NO* para declinar. SmartMigration."
 )
 
-OFFER_TEMPLATE_SMS = (
-    "Hola {name}, eres elegible para migrar a postpago. "
-    "Llama al #611 o visita smartmigration.co para conocer tu oferta personalizada. "
-    "SmartMigration."
+DEFAULT_TEMPLATE_SMS = (
+    "Hola {name}, te invitamos al {plan} por ${price}. "
+    "Responde SI o NO. SmartMigration."
 )
+
+
+def _build_offer_message(client, channel):
+    """
+    Construye el mensaje de oferta para el cliente.
+    Usa la plantilla del Plan si está configurada; si no, la plantilla por defecto.
+    """
+    plan = client.plan
+    if plan:
+        template = (
+            plan.message_template_whatsapp
+            if channel == "WHATSAPP"
+            else plan.message_template_sms
+        ) or (DEFAULT_TEMPLATE_WHATSAPP if channel == "WHATSAPP" else DEFAULT_TEMPLATE_SMS)
+        plan_name = plan.target_plan_name or plan.name
+        price = f"{plan.target_plan_price:,.0f}" if plan.target_plan_price else ""
+    else:
+        template = DEFAULT_TEMPLATE_WHATSAPP if channel == "WHATSAPP" else DEFAULT_TEMPLATE_SMS
+        plan_name = client.get_current_plan_display()
+        price = ""
+
+    first_name = client.full_name.split()[0]
+    return template.format(name=first_name, plan=plan_name, price=price)
 
 
 class TwilioService:
     """
     Integración con Twilio para envío de WhatsApp y SMS (RF15).
-    Stub listo para conectar con las credenciales reales.
+    Cada envío registra automáticamente una entrada en AuditLog (RF14).
     """
 
     def __init__(self):
@@ -115,12 +134,12 @@ class TwilioService:
             logger.error(f"Error al enviar WhatsApp a {clean_number}: {e}")
             return {"success": False, "error": str(e)}
 
-
     # ── RF15: Disparadores de oferta ──────────────────────────────────────────
 
     def send_whatsapp_offer(self, client):
         """
         RF15 — Envía una oferta personalizada por WhatsApp a un cliente.
+        RF14 — Registra la operación en la bitácora de auditoría.
 
         Parámetros:
             client: instancia de apps.core_business.models.Client
@@ -128,15 +147,8 @@ class TwilioService:
         Retorna:
             dict con keys 'success' (bool), 'sid' (str) o 'error' (str),
             y 'log_id' con el ID del NotificationLog creado.
-
-        Nota RF14: mientras el módulo de bitácora no esté disponible,
-        se imprime al log de Django (INFO) el resultado del envío.
         """
-        plan_label = client.get_current_plan_display()
-        message = OFFER_TEMPLATE_WHATSAPP.format(
-            name=client.full_name.split()[0],  # primer nombre
-            plan=plan_label,
-        )
+        message = _build_offer_message(client, channel="WHATSAPP")
 
         result = self.send_whatsapp(client.phone_number, message)
 
@@ -145,16 +157,36 @@ class TwilioService:
             client=client,
             message=message,
             channel=NotificationLog.ChannelChoices.WHATSAPP,
-            status=NotificationLog.StatusChoices.SENT
-            if result["success"]
-            else NotificationLog.StatusChoices.FAILED,
+            status=(
+                NotificationLog.StatusChoices.SENT
+                if result["success"]
+                else NotificationLog.StatusChoices.FAILED
+            ),
             external_id=result.get("sid", ""),
         )
 
-        # Simula RF14 bitácora hasta que el módulo esté listo
-        status_label = "EXITOSO" if result["success"] else "FALLIDO"
+        # RF14 — Registrar en bitácora de auditoría
+        status_label = (
+            "Enviado exitosamente" if result["success"] else f"Fallido: {result.get('error', '')}"
+        )
+        log_critical_action(
+            user=None,
+            action=AuditLog.ActionChoices.NOTIFICATION_SENT,
+            model_name="NotificationLog",
+            object_id=str(log.pk),
+            before=None,
+            after={
+                "client_id": client.pk,
+                "phone_number": client.phone_number,
+                "channel": NotificationLog.ChannelChoices.WHATSAPP,
+                "status": status_label,
+                "twilio_sid": result.get("sid", ""),
+                "notification_log_id": log.pk,
+            },
+        )
+
         logger.info(
-            "[RF15 | RF14-stub] Oferta WhatsApp → cliente=%s | numero=%s | "
+            "[RF15 | RF14] Oferta WhatsApp → cliente=%s | numero=%s | "
             "estado=%s | twilio_sid=%s | log_id=%s",
             client.pk,
             client.phone_number,
@@ -162,16 +194,13 @@ class TwilioService:
             result.get("sid", "N/A"),
             log.pk,
         )
-        print(
-            f"[RF14-stub] OfertaWhatsApp | cliente={client.pk} "
-            f"({client.phone_number}) | {status_label}"
-        )
 
         return {**result, "log_id": log.pk}
 
     def send_sms_offer(self, client):
         """
         RF15 — Envía una oferta personalizada por SMS a un cliente.
+        RF14 — Registra la operación en la bitácora de auditoría.
 
         Parámetros:
             client: instancia de apps.core_business.models.Client
@@ -180,9 +209,7 @@ class TwilioService:
             dict con keys 'success' (bool), 'sid' (str) o 'error' (str),
             y 'log_id' con el ID del NotificationLog creado.
         """
-        message = OFFER_TEMPLATE_SMS.format(
-            name=client.full_name.split()[0],
-        )
+        message = _build_offer_message(client, channel="SMS")
 
         result = self.send_sms(client.phone_number, message)
 
@@ -191,26 +218,42 @@ class TwilioService:
             client=client,
             message=message,
             channel=NotificationLog.ChannelChoices.SMS,
-            status=NotificationLog.StatusChoices.SENT
-            if result["success"]
-            else NotificationLog.StatusChoices.FAILED,
+            status=(
+                NotificationLog.StatusChoices.SENT
+                if result["success"]
+                else NotificationLog.StatusChoices.FAILED
+            ),
             external_id=result.get("sid", ""),
         )
 
-        # Simula RF14 bitácora hasta que el módulo esté listo
-        status_label = "EXITOSO" if result["success"] else "FALLIDO"
+        # RF14 — Registrar en bitácora de auditoría
+        status_label = (
+            "Enviado exitosamente" if result["success"] else f"Fallido: {result.get('error', '')}"
+        )
+        log_critical_action(
+            user=None,
+            action=AuditLog.ActionChoices.NOTIFICATION_SENT,
+            model_name="NotificationLog",
+            object_id=str(log.pk),
+            before=None,
+            after={
+                "client_id": client.pk,
+                "phone_number": client.phone_number,
+                "channel": NotificationLog.ChannelChoices.SMS,
+                "status": status_label,
+                "twilio_sid": result.get("sid", ""),
+                "notification_log_id": log.pk,
+            },
+        )
+
         logger.info(
-            "[RF15 | RF14-stub] Oferta SMS → cliente=%s | numero=%s | "
+            "[RF15 | RF14] Oferta SMS → cliente=%s | numero=%s | "
             "estado=%s | twilio_sid=%s | log_id=%s",
             client.pk,
             client.phone_number,
             status_label,
             result.get("sid", "N/A"),
             log.pk,
-        )
-        print(
-            f"[RF14-stub] OfertaSMS | cliente={client.pk} "
-            f"({client.phone_number}) | {status_label}"
         )
 
         return {**result, "log_id": log.pk}

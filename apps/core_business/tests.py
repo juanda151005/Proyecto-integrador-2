@@ -26,7 +26,7 @@ class ClientBaseTestCase(TestCase):
         # RF06/RF08 requieren que el creador/editor sea un Analista
         analista_group, _ = Group.objects.get_or_create(name="Analista")
         self.user.groups.add(analista_group)
-        
+
         self.api = APIClient()
         self.api.force_authenticate(user=self.user)
 
@@ -79,7 +79,7 @@ class ClientCreateTests(ClientBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["phone_number"], "3001234567")
         self.assertEqual(response.data["full_name"], "Juan Pérez")
-        
+
         # Validación de que la fecha y el plan se guardan correctamente en DB
         client = Client.objects.get(phone_number="3001234567")
         self.assertEqual(str(client.activation_date), "2026-01-15")
@@ -97,7 +97,7 @@ class ClientCreateTests(ClientBaseTestCase):
         response = self.api.post("/api/v1/clients/", self.client_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("activation_date", response.data)
-        # Nota: current_plan tiene "PREPAGO_BASIC" como default en el modelo, 
+        # Nota: current_plan tiene "PREPAGO_BASIC" como default en el modelo,
         # pero si es required=True en frontend se validará. Mandar vacío debería lanzar error en serializador si es choice.
         self.assertIn("current_plan", response.data)
 
@@ -183,7 +183,9 @@ class ClientUpdateTests(ClientBaseTestCase):
         El sistema guarda el cambio correctamente y mantiene los demás datos intactos.
         """
         url = f"/api/v1/clients/{self.client_obj.pk}/"
-        response = self.api.patch(url, {"current_plan": "PREPAGO_PREMIUM"}, format="json")
+        response = self.api.patch(
+            url, {"current_plan": "PREPAGO_PREMIUM"}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.client_obj.refresh_from_db()
         self.assertEqual(self.client_obj.current_plan, "PREPAGO_PREMIUM")
@@ -199,10 +201,14 @@ class ClientUpdateTests(ClientBaseTestCase):
         url = f"/api/v1/clients/{self.client_obj.pk}/"
         original_phone = self.client_obj.phone_number
         # El serializer de Update tiene phone_number como read_only_fields (se ignora).
-        response = self.api.patch(url, {"phone_number": "formato-erroneo", "activation_date": "10-01-2026"}, format="json")
+        response = self.api.patch(
+            url,
+            {"phone_number": "formato-erroneo", "activation_date": "10-01-2026"},
+            format="json",
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("activation_date", response.data)
-        
+
         # Validar que no mutó nada en la BD
         self.client_obj.refresh_from_db()
         self.assertEqual(self.client_obj.phone_number, original_phone)
@@ -213,18 +219,21 @@ class ClientUpdateTests(ClientBaseTestCase):
         El usuario está autenticado con rol "Asesor". Intenta enviar petición PATCH al sistema.
         La plataforma deniega la acción y muestra un mensaje de acceso restringido.
         """
-        asesor_user = User.objects.create_user(username="asesor", email="asesor@test.com", password="Pass123")
+        asesor_user = User.objects.create_user(
+            username="asesor", email="asesor@test.com", password="Pass123"
+        )
         from django.contrib.auth.models import Group
+
         asesor_group, _ = Group.objects.get_or_create(name="Asesor")
         asesor_user.groups.add(asesor_group)
-        
+
         api_asesor = APIClient()
         api_asesor.force_authenticate(user=asesor_user)
-        
+
         url = f"/api/v1/clients/{self.client_obj.pk}/"
         response = api_asesor.patch(url, {"full_name": "Hack"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        
+
     def test_cp_2_2_ejecucion_edicion_autorizada(self):
         """
         CP 2.2: Ejecución de edición autorizada.
@@ -233,11 +242,14 @@ class ClientUpdateTests(ClientBaseTestCase):
         """
         # self.user es nuestro analista creado en setUp
         from django.contrib.auth.models import Group
+
         analista_group, _ = Group.objects.get_or_create(name="Analista")
         self.user.groups.add(analista_group)
-        
+
         url = f"/api/v1/clients/{self.client_obj.pk}/"
-        response = self.api.patch(url, {"full_name": "María López (Corregido)"}, format="json")
+        response = self.api.patch(
+            url, {"full_name": "María López (Corregido)"}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.client_obj.refresh_from_db()
         self.assertEqual(self.client_obj.full_name, "María López (Corregido)")

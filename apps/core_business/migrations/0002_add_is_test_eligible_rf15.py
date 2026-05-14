@@ -7,18 +7,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core_business', '0001_initial'),
+        ("core_business", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='client',
-            name='is_test_eligible',
-            field=models.BooleanField(default=False, help_text='Campo temporal para pruebas del RF15. Marca al cliente para recibir la oferta sin depender del RF12. Reemplazar por is_eligible cuando el motor de reglas esté listo.', verbose_name='[TEST] ¿Elegible para oferta? (RF15)'),
+            model_name="client",
+            name="is_test_eligible",
+            field=models.BooleanField(
+                default=False,
+                help_text="Campo temporal para pruebas del RF15. Marca al cliente para recibir la oferta sin depender del RF12. Reemplazar por is_eligible cuando el motor de reglas esté listo.",
+                verbose_name="[TEST] ¿Elegible para oferta? (RF15)",
+            ),
         ),
         migrations.AlterField(
-            model_name='client',
-            name='phone_number',
-            field=models.CharField(help_text='Número celular colombiano de 10 dígitos (ej: 3001234567)', max_length=20, unique=True, validators=[django.core.validators.RegexValidator(message='El número debe tener 10 dígitos y empezar con 3. Ej: 3001234567', regex='^3\\d{9}$')], verbose_name='Número de celular'),
+            model_name="client",
+            name="phone_number",
+            field=models.CharField(
+                help_text="Número celular colombiano de 10 dígitos (ej: 3001234567)",
+                max_length=20,
+                unique=True,
+                validators=[
+                    django.core.validators.RegexValidator(
+                        message="El número debe tener 10 dígitos y empezar con 3. Ej: 3001234567",
+                        regex="^3\\d{9}$",
+                    )
+                ],
+                verbose_name="Número de celular",
+            ),
         ),
     ]

@@ -1,15 +1,17 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: mysql:8.0
     restart: unless-stopped
     environment:
-      POSTGRES_DB: smart_migration_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      MYSQL_DATABASE: smart_migration_db
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: smart_migration
+      MYSQL_PASSWORD: smart_migration
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
   web:
     build: .
@@ -25,4 +27,4 @@ services:
       - db
 
 volumes:
-  postgres_data:
+  mysql_data:

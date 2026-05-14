@@ -43,12 +43,22 @@
             <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN">
                 <i class="bi bi-sliders"></i> Configuración global
             </a>
-            
+            <a href="planes.html" class="nav-link-custom d-none" id="navPlanes" data-rbac-roles="ADMIN">
+                <i class="bi bi-diagram-3"></i> Planes de Migración
+            </a>
             <a href="clientes.html" class="nav-link-custom active">
                 <i class="bi bi-person-lines-fill"></i> Clientes Prepago
             </a>
-            
-            <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
+            <a href="conversaciones.html" class="nav-link-custom" id="navConversaciones">
+                <i class="bi bi-chat-dots"></i> Conversaciones
+            </a>
+
+            <hr style="border-color: var(--surface-border); margin: 0.5rem 0;">
+
+            <a href="perfil.html" class="nav-link-custom">
+                <i class="bi bi-person-circle"></i> Mi Perfil
+            </a>
+            <a href="#" class="nav-link-custom text-danger mt-2" onclick="SecurityService.logout()">
                 <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
             </a>
         </nav>
@@ -66,7 +76,10 @@
             <button class="btn btn-primary-custom" onclick="openCreateModal()">
                 <i class="bi bi-plus-lg me-1"></i> Nuevo Cliente
             </button>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-secondary-custom" onclick="openImportModal()">
+                    <i class="bi bi-upload me-1"></i> Importar CSV/Excel
+                </button>
                 <button class="btn btn-secondary-custom" onclick="exportCSV()">
                     <i class="bi bi-download me-1"></i> Exportar CSV
                 </button>
@@ -156,7 +169,8 @@
                             <th>Teléfono</th>
                             <th>Nombre</th>
                             <th>Documento</th>
-                            <th>Plan</th>
+                            <th>Plan actual</th>
+                            <th>Migrar a</th>
                             <th>Estado</th>
                             <th>Elegible</th>
                             <th>Gasto Prom.</th>
@@ -166,7 +180,7 @@
                     </thead>
                     <tbody id="clientsTableBody">
                         <tr>
-                            <td colspan="9" class="text-center text-secondary py-4">Cargando clientes...</td>
+                            <td colspan="10" class="text-center text-secondary py-4">Cargando clientes...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -229,6 +243,13 @@
                                     <option value="PREPAGO_PREMIUM">Prepago Premium</option>
                                 </select>
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-secondary small">Plan de migración</label>
+                                <select id="plan" class="form-select form-control-custom">
+                                    <option value="">Sin plan asignado</option>
+                                </select>
+                                <div class="form-text text-secondary">Plan postpago al que se migrará el cliente.</div>
+                            </div>
                             <!-- Estado: solo visible al editar -->
                             <div class="col-md-6 d-none" id="statusGroup">
                                 <label class="form-label text-secondary small">Estado</label>
@@ -247,6 +268,55 @@
                                 data-bs-dismiss="modal">Cancelar</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════ Modal Importar CSV/Excel ══════════════ -->
+    <div class="modal fade" id="importModal" tabindex="-1">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content border-0" style="background: var(--bg-gradient-start);">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-upload text-primary me-2"></i> Importar Clientes
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <div id="importAlert" class="alert d-none py-2 px-3 mb-3"></div>
+                    <p class="text-secondary small mb-3">
+                        Sube un archivo <strong>.csv</strong> o <strong>.xlsx</strong> con las siguientes columnas:<br>
+                        <code>numero_celular, nombre_completo, numero_documento, correo, fecha_activacion, codigo_plan</code>
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small">Archivo *</label>
+                        <input type="file" id="importFile" class="form-control form-control-custom" accept=".csv,.xlsx">
+                    </div>
+                    <div id="importResults" class="d-none">
+                        <div class="glass-panel p-3 small">
+                            <div class="row g-2 text-center">
+                                <div class="col-4">
+                                    <div class="text-success fw-bold fs-4" id="importCreated">0</div>
+                                    <div class="text-secondary">Creados</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-primary fw-bold fs-4" id="importUpdated">0</div>
+                                    <div class="text-secondary">Actualizados</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-danger fw-bold fs-4" id="importErrors">0</div>
+                                    <div class="text-secondary">Errores</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary-custom" id="btnImport" onclick="doImport()">
+                        <i class="bi bi-upload me-1"></i> Importar
+                    </button>
                 </div>
             </div>
         </div>
@@ -344,12 +414,17 @@
                 document.getElementById('clientCount').textContent = `${count} registro${count !== 1 ? 's' : ''}`;
 
                 if (clients.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-secondary py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No se encontraron clientes</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-secondary py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No se encontraron clientes</td></tr>';
                     document.getElementById('paginationList').innerHTML = '';
                     return;
                 }
 
-                tbody.innerHTML = clients.map(c => `
+                tbody.innerHTML = clients.map(c => {
+                    const migPlan = c.plan_detail;
+                    const migCell = migPlan
+                        ? `<span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2" title="${migPlan.name}">${migPlan.target_plan_name || migPlan.name}</span>`
+                        : '<span class="text-muted small">—</span>';
+                    return `
                     <tr>
                         <td class="fw-medium">${c.phone_number}</td>
                         <td>${c.full_name}</td>
@@ -359,6 +434,7 @@
                                 ${PLAN_LABELS[c.current_plan] || c.current_plan}
                             </span>
                         </td>
+                        <td>${migCell}</td>
                         <td>
                             <i class="bi bi-circle-fill small ${STATUS_COLORS[c.status] || 'text-secondary'}"></i>
                             ${STATUS_LABELS[c.status] || c.status}
@@ -378,15 +454,15 @@
                                 <i class="bi bi-trash"></i>
                             </button>` : ''}
                         </td>
-                    </tr>
-                `).join('');
+                    </tr>`;
+                }).join('');
 
                 // Paginación
                 renderPagination(data);
 
             } catch (error) {
                 console.error('Error al cargar clientes:', error);
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-4">Error al cargar clientes</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4">Error al cargar clientes</td></tr>';
             }
         }
 
@@ -421,6 +497,21 @@
             list.innerHTML = html;
         }
 
+        // ══════════════ Cargar planes en el selector ══════════════
+        async function loadPlansSelect(selectedId = null) {
+            const select = document.getElementById('plan');
+            try {
+                const data = await fetchAPI('/clients/plans/?is_active=true');
+                const plans = data.results || data;
+                const options = plans.map(p =>
+                    `<option value="${p.id}" ${selectedId == p.id ? 'selected' : ''}>${p.name} (${p.code})</option>`
+                ).join('');
+                select.innerHTML = `<option value="">Sin plan asignado</option>${options}`;
+            } catch {
+                select.innerHTML = '<option value="">Error al cargar planes</option>';
+            }
+        }
+
         // ══════════════ Modal Crear ══════════════
         function openCreateModal() {
             editingId = null;
@@ -432,6 +523,7 @@
             // Habilitar campos de identidad
             document.getElementById('phone_number').removeAttribute('readonly');
             document.getElementById('document_number').removeAttribute('readonly');
+            loadPlansSelect();
             new bootstrap.Modal(document.getElementById('clientModal')).show();
         }
 
@@ -457,6 +549,7 @@
                 document.getElementById('phone_number').setAttribute('readonly', true);
                 document.getElementById('document_number').setAttribute('readonly', true);
 
+                await loadPlansSelect(client.plan);
                 new bootstrap.Modal(document.getElementById('clientModal')).show();
             } catch (error) {
                 console.error('Error al cargar cliente:', error);
@@ -476,6 +569,7 @@
             alert.classList.add('d-none');
             alert.classList.remove('alert-success', 'alert-danger');
 
+            const planVal = document.getElementById('plan').value;
             const payload = {
                 phone_number: document.getElementById('phone_number').value,
                 full_name: document.getElementById('full_name').value,
@@ -483,6 +577,7 @@
                 email: document.getElementById('email').value,
                 activation_date: document.getElementById('activation_date').value,
                 current_plan: document.getElementById('current_plan').value,
+                plan: planVal ? parseInt(planVal) : null,
             };
 
             if (editingId) {
@@ -616,6 +711,81 @@
             toast.innerHTML = `<i class="bi ${type === 'danger' ? 'bi-exclamation-circle' : 'bi-check-circle'} me-2"></i>${message}`;
             document.body.appendChild(toast);
             setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3500);
+        }
+
+        // ══════════════ Importar CSV/Excel ══════════════
+        function openImportModal() {
+            document.getElementById('importFile').value = '';
+            document.getElementById('importAlert').classList.add('d-none');
+            document.getElementById('importResults').classList.add('d-none');
+            document.getElementById('btnImport').disabled = false;
+            document.getElementById('btnImport').innerHTML = '<i class="bi bi-upload me-1"></i> Importar';
+            new bootstrap.Modal(document.getElementById('importModal')).show();
+        }
+
+        async function doImport() {
+            const fileInput = document.getElementById('importFile');
+            const alertEl = document.getElementById('importAlert');
+            const btn = document.getElementById('btnImport');
+
+            alertEl.classList.add('d-none');
+            alertEl.className = 'alert d-none py-2 px-3 mb-3';
+            document.getElementById('importResults').classList.add('d-none');
+
+            if (!fileInput.files || !fileInput.files[0]) {
+                alertEl.textContent = 'Selecciona un archivo .csv o .xlsx primero.';
+                alertEl.className = 'alert alert-warning py-2 px-3 mb-3';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+
+            const ext = fileInput.files[0].name.split('.').pop().toLowerCase();
+            if (!['csv', 'xlsx'].includes(ext)) {
+                alertEl.textContent = 'Solo se aceptan archivos .csv o .xlsx.';
+                alertEl.className = 'alert alert-warning py-2 px-3 mb-3';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const token = SecurityService.getToken();
+                const res = await fetch(`${API_BASE_URL}/clients/import/`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData,
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw { data };
+                }
+
+                document.getElementById('importCreated').textContent = data.created ?? 0;
+                document.getElementById('importUpdated').textContent = data.updated ?? 0;
+                document.getElementById('importErrors').textContent = data.errors ?? 0;
+                document.getElementById('importResults').classList.remove('d-none');
+
+                alertEl.textContent = `Importación completada: ${data.created ?? 0} creados, ${data.updated ?? 0} actualizados.`;
+                alertEl.className = 'alert alert-success py-2 px-3 mb-3';
+                alertEl.classList.remove('d-none');
+
+                loadClients(1);
+            } catch (err) {
+                console.error('Error en importación:', err);
+                const msg = err.data?.detail || err.data?.error || 'Error al procesar el archivo.';
+                alertEl.textContent = msg;
+                alertEl.className = 'alert alert-danger py-2 px-3 mb-3';
+                alertEl.classList.remove('d-none');
+            } finally {
+                btn.innerHTML = '<i class="bi bi-upload me-1"></i> Importar';
+                btn.disabled = false;
+            }
         }
 
         // ── Cargar al inicio ──

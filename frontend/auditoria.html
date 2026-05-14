@@ -41,11 +41,21 @@
                 <i class="bi bi-sliders"></i> Configuración global
             </a>
 
+            <a href="planes.html" class="nav-link-custom d-none" id="navPlanes" data-rbac-roles="ADMIN">
+                <i class="bi bi-diagram-3"></i> Planes de Migración
+            </a>
             <a href="clientes.html" class="nav-link-custom">
                 <i class="bi bi-person-lines-fill"></i> Clientes Prepago
             </a>
+            <a href="conversaciones.html" class="nav-link-custom" id="navConversaciones">
+                <i class="bi bi-chat-dots"></i> Conversaciones
+            </a>
 
-            <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
+            <hr style="border-color: var(--surface-border); margin: 0.5rem 0;">
+            <a href="perfil.html" class="nav-link-custom">
+                <i class="bi bi-person-circle"></i> Mi Perfil
+            </a>
+            <a href="#" class="nav-link-custom text-danger mt-2" onclick="SecurityService.logout()">
                 <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
             </a>
         </nav>

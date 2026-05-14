@@ -29,6 +29,12 @@ class CustomUser(AbstractUser):
         blank=True,
         verbose_name="Teléfono",
     )
+    photo = models.ImageField(
+        upload_to="profiles/",
+        null=True,
+        blank=True,
+        verbose_name="Foto de perfil",
+    )
 
     # Forzar email único (Criterio de aceptación RF01)
     email = models.EmailField(

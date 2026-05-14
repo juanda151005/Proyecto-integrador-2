@@ -41,7 +41,6 @@ def snapshot_client(client: Client) -> dict[str, Any]:
         "activation_date": _json_safe(client.activation_date),
         "current_plan": client.current_plan,
         "is_eligible": client.is_eligible,
-        "is_test_eligible": client.is_test_eligible,
         "average_spending": _json_safe(client.average_spending),
         "status": client.status,
         "created_at": _json_safe(client.created_at),

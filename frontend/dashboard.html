@@ -41,12 +41,22 @@
             <a href="configuracion.html" class="nav-link-custom d-none" id="navConfig" data-rbac-roles="ADMIN">
                 <i class="bi bi-sliders"></i> Configuración global
             </a>
-            
+            <a href="planes.html" class="nav-link-custom d-none" id="navPlanes" data-rbac-roles="ADMIN">
+                <i class="bi bi-diagram-3"></i> Planes de Migración
+            </a>
             <a href="clientes.html" class="nav-link-custom">
                 <i class="bi bi-person-lines-fill"></i> Clientes Prepago
             </a>
-            
-            <a href="#" class="nav-link-custom mt-auto text-danger mt-5" onclick="SecurityService.logout()">
+            <a href="conversaciones.html" class="nav-link-custom" id="navConversaciones">
+                <i class="bi bi-chat-dots"></i> Conversaciones
+            </a>
+
+            <hr style="border-color: var(--surface-border); margin: 0.5rem 0;">
+
+            <a href="perfil.html" class="nav-link-custom">
+                <i class="bi bi-person-circle"></i> Mi Perfil
+            </a>
+            <a href="#" class="nav-link-custom text-danger mt-2" onclick="SecurityService.logout()">
                 <i class="bi bi-box-arrow-left text-danger"></i> Cerrar Sesión
             </a>
         </nav>
@@ -64,34 +74,128 @@
             </div>
         </header>
 
-        <div class="row g-4">
+        <h5 class="mb-3 text-secondary fw-semibold d-flex align-items-center gap-2">
+            <i class="bi bi-briefcase"></i> Cartera y gasto
+        </h5>
+        <div class="row g-4 mb-2">
             <div class="col-md-4">
                 <div class="glass-panel p-4 h-100">
                     <div class="d-inline-flex bg-primary bg-opacity-10 text-primary p-3 rounded-3 mb-3">
                         <i class="bi bi-lightning-charge fs-4"></i>
                     </div>
-                    <h5>Clientes Elegibles</h5>
-                    <h2 class="fw-bold mb-0">---</h2>
+                    <h6 class="text-secondary mb-2 lh-sm">Pueden recibir la oferta de migración</h6>
+                    <h2 class="fw-bold mb-0" id="statEligible">---</h2>
                 </div>
             </div>
-            
             <div class="col-md-4">
                 <div class="glass-panel p-4 h-100">
                     <div class="d-inline-flex bg-success bg-opacity-10 text-success p-3 rounded-3 mb-3">
                         <i class="bi bi-check-circle fs-4"></i>
                     </div>
-                    <h5>Migraciones Exitosas</h5>
-                    <h2 class="fw-bold mb-0">---</h2>
+                    <h6 class="text-secondary mb-2 lh-sm">Ya pasaron a postpago</h6>
+                    <h2 class="fw-bold mb-0" id="statMigrated">---</h2>
                 </div>
             </div>
-
             <div class="col-md-4">
                 <div class="glass-panel p-4 h-100">
                     <div class="d-inline-flex bg-secondary bg-opacity-10 text-secondary p-3 rounded-3 mb-3">
                         <i class="bi bi-cash-coin fs-4"></i>
                     </div>
-                    <h5>Gasto Promedio</h5>
-                    <h2 class="fw-bold mb-0">---</h2>
+                    <h6 class="text-secondary mb-2 lh-sm">Gasto mensual promedio de la base</h6>
+                    <h2 class="fw-bold mb-0" id="statSpending">---</h2>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="mt-4 mb-3 text-secondary fw-semibold d-flex align-items-center gap-2">
+            <i class="bi bi-graph-up-arrow"></i> Métricas de conversión
+        </h5>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-4 mb-2">
+            <div class="col">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-primary bg-opacity-10 text-primary p-2 rounded-3 mb-2">
+                        <i class="bi bi-people fs-5"></i>
+                    </div>
+                    <h6 class="text-secondary mb-2 lh-sm">Personas a las que les llegó la oferta</h6>
+                    <h3 class="fw-bold mb-0" id="rf17CustomersContacted">---</h3>
+                </div>
+            </div>
+            <div class="col">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-info bg-opacity-10 text-info p-2 rounded-3 mb-2">
+                        <i class="bi bi-send fs-5"></i>
+                    </div>
+                    <h6 class="text-secondary mb-2 lh-sm">Cuántas ofertas se mandaron en total</h6>
+                    <h3 class="fw-bold mb-0" id="rf17OffersSent">---</h3>
+                </div>
+            </div>
+            <div class="col">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-success bg-opacity-10 text-success p-2 rounded-3 mb-2">
+                        <i class="bi bi-hand-thumbs-up fs-5"></i>
+                    </div>
+                    <h6 class="text-secondary mb-2 lh-sm">% que dijeron Sí (solo entre quienes contestaron)</h6>
+                    <h3 class="fw-bold mb-0" id="rf17AcceptanceRate">---</h3>
+                </div>
+            </div>
+            <div class="col">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-danger bg-opacity-10 text-danger p-2 rounded-3 mb-2">
+                        <i class="bi bi-hand-thumbs-down fs-5"></i>
+                    </div>
+                    <h6 class="text-secondary mb-2 lh-sm">% que dijeron No (solo entre quienes contestaron)</h6>
+                    <h3 class="fw-bold mb-0" id="rf17RejectionRate">---</h3>
+                </div>
+            </div>
+            <div class="col">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-warning bg-opacity-10 text-warning p-2 rounded-3 mb-2">
+                        <i class="bi bi-trophy fs-5"></i>
+                    </div>
+                    <h6 class="text-secondary mb-2 lh-sm">% que migró de quienes recibieron oferta</h6>
+                    <h3 class="fw-bold mb-0" id="rf17FinalConversion">---</h3>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="mt-4 mb-3 text-secondary fw-semibold d-flex align-items-center gap-2">
+            <i class="bi bi-activity"></i> Canal y conversaciones
+        </h5>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-warning bg-opacity-10 text-warning p-3 rounded-3 mb-3">
+                        <i class="bi bi-chat-dots fs-4"></i>
+                    </div>
+                    <h6 class="text-secondary mb-2 lh-sm">Chats aún abiertos</h6>
+                    <h2 class="fw-bold mb-0" id="statOpenConv">---</h2>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-secondary bg-opacity-10 text-secondary p-3 rounded-3 mb-3">
+                        <i class="bi bi-chat-square-text fs-4"></i>
+                    </div>
+                    <h6 class="text-secondary mb-2 lh-sm">Chats ya cerrados</h6>
+                    <h2 class="fw-bold mb-0" id="statClosedConv">---</h2>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-info bg-opacity-10 text-info p-3 rounded-3 mb-3">
+                        <i class="bi bi-reply-all fs-4"></i>
+                    </div>
+                    <h6 class="text-secondary mb-2 lh-sm">% de envíos ya marcados aceptado o rechazado</h6>
+                    <h2 class="fw-bold mb-0" id="statResponseRate">---</h2>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="glass-panel p-4 h-100">
+                    <div class="d-inline-flex bg-danger bg-opacity-10 text-danger p-3 rounded-3 mb-3">
+                        <i class="bi bi-exclamation-triangle fs-4"></i>
+                    </div>
+                    <h6 class="text-secondary mb-2 lh-sm">Envíos que no se pudieron entregar</h6>
+                    <h2 class="fw-bold mb-0" id="statFailedNotif">---</h2>
                 </div>
             </div>
         </div>
@@ -103,7 +207,6 @@
                     <h5 class="mb-3 d-flex align-items-center gap-2">
                         <i class="bi bi-gear text-primary"></i> Panel de Administración
                     </h5>
-                    <p class="text-secondary small mb-3">RF19: Este panel solo es visible para el rol Administrador.</p>
                     <div class="d-flex gap-2 flex-wrap">
                         <a href="usuarios.html" class="btn btn-primary-custom btn-sm">
                             <i class="bi bi-people me-1"></i> Gestionar Usuarios
@@ -125,8 +228,35 @@
 
     <script src="js/api.js"></script>
     <script>
-        // RF19: Guard centralizado — verifica auth y aplica RBAC en UI
         SecurityService.initPage();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const r = await fetchAPI('/management/reports/conversion/', { method: 'GET' });
+
+                const pct = (v) => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) + '%' : '0%');
+                document.getElementById('rf17CustomersContacted').textContent = r.customers_contacted ?? '0';
+                document.getElementById('rf17OffersSent').textContent = r.offers_sent ?? '0';
+                document.getElementById('rf17AcceptanceRate').textContent = pct(r.acceptance_rate);
+                document.getElementById('rf17RejectionRate').textContent = pct(r.rejection_rate);
+                document.getElementById('rf17FinalConversion').textContent = pct(
+                    r.migration_rate_vs_contacted ?? r.conversion_rate
+                );
+
+                document.getElementById('statEligible').textContent = r.eligible_clients ?? '0';
+                document.getElementById('statMigrated').textContent = r.migrated_clients ?? '0';
+                document.getElementById('statSpending').textContent = new Intl.NumberFormat('es-CO', {
+                    style: 'currency', currency: 'COP', maximumFractionDigits: 0
+                }).format(r.average_spending_global || 0);
+                document.getElementById('statOpenConv').textContent = r.open_conversations ?? '0';
+                document.getElementById('statClosedConv').textContent = r.closed_conversations ?? '0';
+                document.getElementById('statFailedNotif').textContent = r.failed ?? '0';
+                const rate = r.response_rate != null ? parseFloat(r.response_rate).toFixed(1) + '%' : '0%';
+                document.getElementById('statResponseRate').textContent = rate;
+            } catch (error) {
+                console.error("Error cargando estadísticas del dashboard:", error);
+            }
+        });
     </script>
 </body>
 </html>

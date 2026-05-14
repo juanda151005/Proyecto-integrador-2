@@ -178,3 +178,91 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
   border-bottom: 1px solid var(--surface-border);
   vertical-align: middle;
 }
+
+/* ==========================================================================
+   Landing Page Styles
+   ========================================================================== */
+.hero-section {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 6rem 0;
+}
+.hero-bg-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 0;
+  background: radial-gradient(circle at 80% 20%, rgba(255, 153, 29, 0.15), transparent 40%),
+              radial-gradient(circle at 20% 80%, rgba(50, 81, 144, 0.15), transparent 40%);
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+.hero-text h1 {
+  font-size: 3.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero-text p {
+  font-size: 1.1rem;
+  color: var(--text-body);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+.hero-image-wrapper {
+  position: relative;
+  z-index: 1;
+  animation: float 6s ease-in-out infinite;
+}
+.hero-img {
+  width: 100%;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(50, 81, 144, 0.25);
+  border: 1px solid var(--surface-border);
+  backdrop-filter: blur(5px);
+  object-fit: cover;
+}
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+.feature-card {
+  height: 100%;
+  transition: transform 0.3s ease;
+  border-top: 4px solid rgba(50, 81, 144, 0.8);
+}
+.feature-card.secondary {
+  border-top: 4px solid var(--secondary-color);
+}
+.feature-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px -10px rgba(50, 81, 144, 0.2);
+}
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1.25rem;
+  color: var(--primary-color);
+}
+.landing-nav {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 1.5rem 0;
+  z-index: 10;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+@media (max-width: 768px) {
+  .hero-text h1 { font-size: 2.5rem; }
+  .hero-section { min-height: auto; padding: 8rem 0 4rem; }
+}

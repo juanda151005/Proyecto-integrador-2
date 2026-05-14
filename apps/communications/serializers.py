@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import NotificationLog
+from .models import Conversation, NotificationLog
 
 
 class NotificationLogSerializer(serializers.ModelSerializer):
@@ -36,7 +36,7 @@ class SendOfferSerializer(serializers.Serializer):
 
 
 class SendNotificationSerializer(serializers.Serializer):
-    """Serializer para enviar una notificación libre a un cliente."""
+    """Serializer para enviar una notificación a un cliente."""
 
     client_id = serializers.IntegerField()
     channel = serializers.ChoiceField(choices=NotificationLog.ChannelChoices.choices)
@@ -44,16 +44,64 @@ class SendNotificationSerializer(serializers.Serializer):
 
 
 class BulkNotificationSerializer(serializers.Serializer):
-    """RF15 — Serializer para envío masivo de ofertas a elegibles."""
+    """Serializer para envío masivo de ofertas a elegibles (RF15)."""
 
     channel = serializers.ChoiceField(
         choices=NotificationLog.ChannelChoices.choices,
         default=NotificationLog.ChannelChoices.WHATSAPP,
     )
-    use_test_eligible = serializers.BooleanField(
-        default=False,
-        help_text=(
-            "Si True, usa is_test_eligible en lugar de is_eligible. "
-            "Permite probar RF15 sin depender del motor RF12."
-        ),
+
+
+class ConversationSerializer(serializers.ModelSerializer):
+    """Serializer para conversaciones (flujo asesor / chat)."""
+
+    client_phone = serializers.CharField(source="client.phone_number", read_only=True)
+    client_name = serializers.CharField(source="client.full_name", read_only=True)
+    notification_channel = serializers.CharField(source="notification.channel", read_only=True)
+    advisor_name = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    response_display = serializers.CharField(
+        source="get_client_response_display", read_only=True
     )
+
+    def get_advisor_name(self, obj):
+        if obj.advisor:
+            return obj.advisor.get_full_name() or obj.advisor.username
+        return None
+
+    class Meta:
+        model = Conversation
+        fields = [
+            "id",
+            "notification",
+            "client",
+            "client_phone",
+            "client_name",
+            "notification_channel",
+            "status",
+            "status_display",
+            "client_response",
+            "response_display",
+            "had_response",
+            "advisor",
+            "advisor_name",
+            "notes",
+            "opened_at",
+            "closed_at",
+        ]
+        read_only_fields = [
+            "id",
+            "client",
+            "notification",
+            "client_response",
+            "had_response",
+            "opened_at",
+        ]
+
+
+class ConversationUpdateSerializer(serializers.ModelSerializer):
+    """Permite al asesor actualizar estado, notas y cerrar la conversación."""
+
+    class Meta:
+        model = Conversation
+        fields = ["status", "advisor", "notes", "closed_at"]

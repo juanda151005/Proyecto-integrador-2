@@ -15,6 +15,8 @@ from .base import *  # noqa: F401, F403
 
 DEBUG = True
 
+ALLOWED_HOSTS = ["*"]
+
 # =============================================================================
 # DATABASE — SQLite for local development
 # =============================================================================
@@ -34,3 +36,10 @@ DATABASES = {
 # =============================================================================
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# =============================================================================
+# EMAIL — En desarrollo los emails se imprimen en la consola (sin SMTP)
+# Para probar envío real, comenta la línea de abajo y configura tu .env
+# =============================================================================
+
+# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

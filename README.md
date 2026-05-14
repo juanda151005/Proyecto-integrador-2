@@ -1,4 +1,3 @@
-# Proyecto-integrador-2
 # Sistema Inteligente de Migración de Clientes Prepago a Postpago
 
 Sistema backend en Django REST Framework que identifica clientes prepago con alto

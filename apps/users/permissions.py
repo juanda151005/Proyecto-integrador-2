@@ -35,11 +35,11 @@ class IsAgent(BasePermission):
 
 
 class IsAdminOrAnalyst(BasePermission):
-    """Usuarios con rol ADMIN o ANALYST."""
+    """Usuarios con rol ADMIN, ANALYST o AGENT."""
 
     def has_permission(self, request, view):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role in ("ADMIN", "ANALYST")
+            and request.user.role in ("ADMIN", "ANALYST", "AGENT")
         )

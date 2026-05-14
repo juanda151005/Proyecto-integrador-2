@@ -4,7 +4,6 @@ Lectura en caliente de configuración global sin reiniciar el servidor.
 
 from django.core.cache import cache
 
-
 _CACHE_KEY = "global_system_settings_v1"
 
 
