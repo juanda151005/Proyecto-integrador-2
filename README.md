@@ -633,4 +633,6 @@ git push origin feature/nombre-descriptivo
 | Santiago Sabogal Lozano | Líder / Analista |
 | Juan David Velásquez Restrepo | Desarrollador backend |
 | Esteban Salazar Orozco | Diseñador / UX |
-| Emmanuel Castañeda Cano | Analista de negocio |
+| Emmanuel Castañeda Cano | Analista de negocio | 
+| Jean Paul Guillot Gallego | Documentador | 
+
