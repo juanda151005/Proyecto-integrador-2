@@ -54,6 +54,7 @@ urlpatterns = [
     path("api/v1/analytics/", include("apps.analytics.urls")),
     path("api/v1/management/", include("apps.management.urls")),
     path("api/v1/communications/", include("apps.communications.urls")),
+    path("api/v1/external/", include("apps.external_api.urls")),
     # =========================================================================
     # API Documentation — Swagger / OpenAPI
     # =========================================================================

@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 from apps.analytics.models import TopUp
 from apps.analytics.services import EligibilityEngine
 from apps.core_business.models import Client
+from apps.communications.models import Conversation, NotificationLog
 from apps.management.models import AuditLog, BusinessRule
 from apps.users.models import CustomUser
 
@@ -14,6 +15,7 @@ from apps.users.models import CustomUser
 
 MANAGEMENT_RULES_URL = "/api/v1/management/rules/"
 AUDIT_LOGS_URL = "/api/v1/management/audit-logs/"
+CONVERSION_REPORT_URL = "/api/v1/management/reports/conversion/"
 CLIENTS_API = "/api/v1/clients/"
 
 
@@ -253,3 +255,70 @@ class AuditLogRF14Tests(TestCase):
             AuditLog.objects.filter(pk=entry.pk).delete()
 
         self.assertTrue(AuditLog.objects.filter(pk=entry.pk).exists())
+
+
+class ConversionReportRF17Test(TestCase):
+    """RF17 — Dashboard de conversión: tasas Sí/No, contactados vs ofertas, migración / contactados."""
+
+    def setUp(self):
+        self.api = APIClient()
+        self.admin = make_admin_user("admin_rf17")
+        self.api.force_authenticate(user=self.admin)
+
+    def _log(self, client, status=NotificationLog.StatusChoices.SENT):
+        return NotificationLog.objects.create(
+            client=client,
+            message="Oferta test",
+            channel=NotificationLog.ChannelChoices.WHATSAPP,
+            status=status,
+        )
+
+    def test_conversion_report_metrics(self):
+        """
+        Tres clientes contactados, cuatro envíos exitosos; un migrado entre contactados;
+        tasas de aceptación/rechazo sobre respuestas Sí/No.
+        """
+        c1 = make_client("3001111111")
+        c2 = make_client("3002222222")
+        c3 = make_client("3003333333")
+
+        self._log(c1)
+        self._log(c1)
+        self._log(c2)
+        n3 = self._log(c3)
+
+        Conversation.objects.create(
+            notification=n3,
+            client=c3,
+            status=Conversation.StatusChoices.CLOSED,
+            client_response=Conversation.ResponseChoices.NO,
+            had_response=True,
+        )
+
+        n2 = NotificationLog.objects.filter(client=c2).first()
+        Conversation.objects.create(
+            notification=n2,
+            client=c2,
+            status=Conversation.StatusChoices.OPEN,
+            client_response=Conversation.ResponseChoices.YES,
+            had_response=True,
+        )
+
+        c3.status = Client.StatusChoices.MIGRATED
+        c3.save(update_fields=["status"])
+
+        r = self.api.get(CONVERSION_REPORT_URL)
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["customers_contacted"], 3)
+        self.assertEqual(r.data["offers_sent"], 4)
+        self.assertEqual(r.data["migrated_among_contacted"], 1)
+        self.assertEqual(r.data["migration_rate_vs_contacted"], 33.33)
+        self.assertEqual(r.data["responses_total"], 2)
+        self.assertEqual(r.data["acceptance_rate"], 50.0)
+        self.assertEqual(r.data["rejection_rate"], 50.0)
+        self.assertEqual(r.data["conversion_rate"], r.data["migration_rate_vs_contacted"])
+
+    def test_unauthenticated_cannot_access_conversion_report(self):
+        bare = APIClient()
+        r = bare.get(CONVERSION_REPORT_URL)
+        self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
