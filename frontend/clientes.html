@@ -450,7 +450,11 @@
                                 <i class="bi bi-pencil"></i>
                             </button>
                             ${SecurityService.hasRole(['ADMIN']) ? `
-                            <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmDelete(${c.id}, '${c.full_name.replace(/'/g, "\\'")}')" data-rbac-roles="ADMIN">
+                            <a class="btn btn-sm btn-outline-secondary me-1" title="Ver historial"
+                               href="historial-cliente.html?client_id=${c.id}">
+                                <i class="bi bi-clock-history"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmDelete(${c.id}, '${c.full_name.replace(/'/g, "\\'")}')">
                                 <i class="bi bi-trash"></i>
                             </button>` : ''}
                         </td>
