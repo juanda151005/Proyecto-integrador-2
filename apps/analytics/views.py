@@ -105,15 +105,33 @@ class EvaluateEligibilityView(APIView):
 class ClientChangeLogListView(generics.ListAPIView):
     """
     GET — Historial de cambios de un cliente (RF18).
-    Filtrar por client_id via query param: ?client_id=<int>
+
+    Query params:
+        client_id=<int>   — filtra por cliente (requerido en la práctica).
+        field_name=<str>  — filtra por nombre del campo modificado.
+
+    Ordenamiento: cronológico descendente (más reciente primero).
+    Resultados paginados igual que el resto de la API.
     """
 
     serializer_class = ClientChangeLogSerializer
     permission_classes = [IsAuthenticated]
+    filterset_fields = ["client", "changed_by"]
+    search_fields = ["field_name", "old_value", "new_value"]
+    ordering_fields = ["changed_at"]
+    ordering = ["-changed_at"]
 
     def get_queryset(self):
-        queryset = ClientChangeLog.objects.select_related("client", "changed_by").all()
+        queryset = ClientChangeLog.objects.select_related(
+            "client", "changed_by"
+        ).all()
+
         client_id = self.request.query_params.get("client_id")
         if client_id:
             queryset = queryset.filter(client_id=client_id)
+
+        field_name = self.request.query_params.get("field_name")
+        if field_name:
+            queryset = queryset.filter(field_name__icontains=field_name)
+
         return queryset
