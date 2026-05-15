@@ -33,12 +33,26 @@ def recalculate_average_spending_on_topup(sender, instance, created, **kwargs):
     if not created:
         return
 
+    from apps.analytics.history import record_client_changes, snapshot_for_history
     from .services import EligibilityEngine
 
     client = instance.client
+
+    # Capturar estado ANTES de re-evaluar para RF18
+    before = snapshot_for_history(client)
+
     # RF13/RF15 — Al evaluar el cliente, se actualiza el promedio,
     # el estado is_eligible y se dispara la oferta si corresponde.
     EligibilityEngine.evaluate_client(client)
+
+    # RF18 — Refrescar y registrar cambios producidos por la nueva recarga
+    client.refresh_from_db()
+    record_client_changes(
+        before,
+        client,
+        changed_by=None,
+        source="Recarga registrada (RF12)",
+    )
 
     logger.info(
         "[RF12-signal] Evaluación completa (promedio y elegibilidad) para cliente %s (%s)",

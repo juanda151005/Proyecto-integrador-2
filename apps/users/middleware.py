@@ -32,6 +32,7 @@ RBAC_ROUTE_MAP = [
 # Rutas que NO requieren autenticación (login, docs, schema)
 PUBLIC_PATHS = [
     r"^/api/v1/auth/",
+    r"^/api/v1/external/",   # RF20 — autenticación propia via API Key
     r"^/api/schema/",
     r"^/api/docs/",
     r"^/api/redoc/",

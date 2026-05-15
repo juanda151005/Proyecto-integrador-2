@@ -36,7 +36,11 @@ def evaluate_eligibility_on_save(sender, instance, created, update_fields, **kwa
     if update_fields == _ELIGIBILITY_UPDATE_FIELDS:
         return
 
+    from apps.analytics.history import record_client_changes, snapshot_for_history
     from apps.analytics.services import EligibilityEngine
+
+    # Capturar estado ANTES de la evaluación para RF18
+    before = snapshot_for_history(instance)
 
     try:
         EligibilityEngine.evaluate_client(instance)
@@ -46,6 +50,16 @@ def evaluate_eligibility_on_save(sender, instance, created, update_fields, **kwa
             instance.pk,
             exc,
         )
+        return
+
+    # RF18 — Refrescar la instancia y registrar cambios automáticos
+    instance.refresh_from_db()
+    record_client_changes(
+        before,
+        instance,
+        changed_by=None,
+        source="Motor de elegibilidad",
+    )
 
 
 @receiver(pre_save, sender="core_business.Client")

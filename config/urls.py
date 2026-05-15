@@ -1,8 +1,11 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
+from django.views.static import serve
 from rest_framework_simplejwt.views import TokenRefreshView
+import os
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
@@ -51,6 +54,7 @@ urlpatterns = [
     path("api/v1/analytics/", include("apps.analytics.urls")),
     path("api/v1/management/", include("apps.management.urls")),
     path("api/v1/communications/", include("apps.communications.urls")),
+    path("api/v1/external/", include("apps.external_api.urls")),
     # =========================================================================
     # API Documentation — Swagger / OpenAPI
     # =========================================================================
@@ -66,3 +70,16 @@ urlpatterns = [
 # Servir archivos media en desarrollo (fotos de perfil — RF04)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# =========================================================================
+# Frontend — Servir archivos HTML/CSS/JS estáticos en desarrollo
+# =========================================================================
+FRONTEND_DIR = os.path.join(settings.BASE_DIR, "frontend")
+
+urlpatterns += [
+    # Ruta raíz → redirige al login
+    path("", RedirectView.as_view(url="/frontend/login.html", permanent=False)),
+
+    # Servir cualquier archivo dentro de frontend/
+    re_path(r"^frontend/(?P<path>.*)$", serve, {"document_root": FRONTEND_DIR}),
+]

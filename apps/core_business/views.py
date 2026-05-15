@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from apps.management.audit import log_critical_action, snapshot_client
 from apps.management.models import AuditLog
+from apps.analytics.history import record_client_changes, snapshot_for_history
 from apps.users.permissions import IsAdmin, IsAdminOrAnalyst
 
 from .filters import ClientFilter
@@ -93,14 +94,26 @@ class ClientDetailView(generics.RetrieveUpdateDestroyAPIView):
         return ClientSerializer
 
     def perform_update(self, serializer):
-        before = snapshot_client(serializer.instance)
+        # Capturar estado anterior ANTES de guardar (para RF18 y RF14)
+        before_history = snapshot_for_history(serializer.instance)
+        before_audit = snapshot_client(serializer.instance)
+
         client = serializer.save()
+
+        # RF18 — Registrar cambios campo por campo en historial del cliente
+        record_client_changes(
+            before_history,
+            client,
+            changed_by=self.request.user,
+        )
+
+        # RF14 — Registrar snapshot completo en bitácora de auditoría
         log_critical_action(
             user=self.request.user,
             action=AuditLog.ActionChoices.UPDATE,
             model_name="Client",
             object_id=str(client.pk),
-            before=before,
+            before=before_audit,
             after=snapshot_client(client),
             request=self.request,
         )

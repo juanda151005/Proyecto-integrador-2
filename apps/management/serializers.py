@@ -72,8 +72,20 @@ class ConversionReportSerializer(serializers.Serializer):
     inactive_clients = serializers.IntegerField(default=0)
     eligible_clients = serializers.IntegerField()
     migrated_clients = serializers.IntegerField()
+    # RF17: % clientes migrados entre los que recibieron oferta (contactados)
     conversion_rate = serializers.FloatField()
+    migrated_among_contacted = serializers.IntegerField(default=0)
+    migration_rate_vs_contacted = serializers.FloatField(default=0.0)
     average_spending_global = serializers.FloatField(default=0.0)
+
+    # RF17 — Alcance de campaña
+    customers_contacted = serializers.IntegerField(default=0)
+    offers_sent = serializers.IntegerField(default=0)
+
+    # RF17 — Tasas sobre respuestas Sí / No (conversaciones con respuesta)
+    acceptance_rate = serializers.FloatField(default=0.0)
+    rejection_rate = serializers.FloatField(default=0.0)
+    responses_total = serializers.IntegerField(default=0)
 
     # Notificaciones
     total_notifications = serializers.IntegerField(default=0)
