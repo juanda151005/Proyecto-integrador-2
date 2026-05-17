@@ -307,7 +307,8 @@ class ClientImportView(APIView):
     def _parse_csv(file_obj):
         try:
             content = file_obj.read().decode("utf-8-sig")
-            reader = csv.DictReader(io.StringIO(content))
+            dialect = csv.Sniffer().sniff(content[:2048], delimiters=",;\t|")
+            reader = csv.DictReader(io.StringIO(content), dialect=dialect)
             return [ClientImportView._normalize_row(row) for row in reader]
         except Exception as exc:
             return Response(
