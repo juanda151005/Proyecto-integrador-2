@@ -724,6 +724,8 @@
             document.getElementById('importResults').classList.add('d-none');
             document.getElementById('btnImport').disabled = false;
             document.getElementById('btnImport').innerHTML = '<i class="bi bi-upload me-1"></i> Importar';
+            document.getElementById('importFile').value = '';
+            document.querySelectorAll('#importModal pre').forEach(el => el.remove());
             new bootstrap.Modal(document.getElementById('importModal')).show();
         }
 
@@ -772,12 +774,23 @@
 
                 document.getElementById('importCreated').textContent = data.created ?? 0;
                 document.getElementById('importUpdated').textContent = data.updated ?? 0;
-                document.getElementById('importErrors').textContent = data.errors ?? 0;
+                document.getElementById('importErrors').textContent = data.error_count ?? 0;
                 document.getElementById('importResults').classList.remove('d-none');
 
                 alertEl.textContent = `Importación completada: ${data.created ?? 0} creados, ${data.updated ?? 0} actualizados.`;
                 alertEl.className = 'alert alert-success py-2 px-3 mb-3';
                 alertEl.classList.remove('d-none');
+
+                if (data.errors && data.errors.length > 0) {
+                    const errLines = data.errors.map(e => {
+                        const msgs = Object.entries(e.errores || {}).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('; ');
+                        return `Fila ${e.fila}: ${msgs}`;
+                    }).join('\n');
+                    const errBox = document.createElement('pre');
+                    errBox.style.cssText = 'font-size:0.75rem;max-height:120px;overflow-y:auto;background:rgba(255,0,0,0.05);padding:8px;border-radius:6px;margin-top:8px;white-space:pre-wrap;';
+                    errBox.textContent = errLines;
+                    alertEl.after(errBox);
+                }
 
                 loadClients(1);
             } catch (err) {
